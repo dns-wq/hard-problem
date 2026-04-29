@@ -34,3 +34,11 @@ __pycache__/
 *.pyo
 .venv/
 venv/
+
+# Source PDFs — users should obtain their own copies
+# (extraction/embedding pipeline reads from this dir)
+scripts/pdfs/*.pdf
+scripts/pdfs/*.html
+
+# Generated PDF extraction artifacts
+scripts/extracted/
