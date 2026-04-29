@@ -38,6 +38,10 @@ export function Header() {
     <header className="header">
       <div className="header-inner">
         <Link href="/" className="header-logo">
+          <svg viewBox="0 0 32 32" width="22" height="22" style={{ display: "inline-block", verticalAlign: "middle", marginRight: "0.4rem", position: "relative", top: "-1px" }}>
+            <path d="M16 2 A14 14 0 1 1 12.5 2.6" fill="none" stroke="var(--accent)" strokeWidth="3.5" strokeLinecap="round" />
+            <circle cx="16" cy="16" r="3.5" fill="var(--accent)" />
+          </svg>
           Hard Problem
         </Link>
 
