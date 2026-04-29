@@ -7,6 +7,7 @@ import FramingSection from "@/components/topic/FramingSection";
 import RealWorldAnchor from "@/components/topic/RealWorldAnchor";
 import PapersSection from "@/components/topic/PapersSection";
 import ConceptChip from "@/components/topic/ConceptChip";
+import VideosSection from "@/components/topic/VideosSection";
 
 const DIFFICULTY_COLOR: Record<string, string> = {
   accessible: "#2a7a3b",
@@ -112,6 +113,9 @@ export default function TopicPage() {
           <FramingSection text={topic.framing_note} />
         </section>
       )}
+
+      {/* From the author — video embeds */}
+      <VideosSection videos={(topic.videos ?? []) as { youtube_id: string; title: string; speaker: string; duration_min?: number; note?: string }[]} />
 
       {/* Real-world anchor */}
       {anchor?.title && anchor?.body && (
