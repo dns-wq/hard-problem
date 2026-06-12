@@ -205,7 +205,7 @@ export default function ContributionCard({
                 <button
                   type="button"
                   className="contribution-action-btn"
-                  style={{ color: "#c44" }}
+                  style={{ color: "var(--danger)" }}
                   onClick={() => { if (confirm("Delete this contribution?")) deleteC.mutate({ id }); }}
                 >
                   Delete

@@ -43,7 +43,7 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
   if (passed) {
     return (
       <div style={{ padding: "1.5rem", textAlign: "center" }}>
-        <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "#2a7a3b", marginBottom: "0.4rem" }}>Quiz passed!</p>
+        <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--success)", marginBottom: "0.4rem" }}>Quiz passed!</p>
         <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Unlocking AI Q&A…</p>
       </div>
     );
@@ -124,7 +124,7 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
         })}
 
         {results && !passed && (
-          <p style={{ fontSize: "0.82rem", color: "#c44", marginBottom: "0.75rem" }}>
+          <p style={{ fontSize: "0.82rem", color: "var(--danger)", marginBottom: "0.75rem" }}>
             Some answers were incorrect. Review and try again.
           </p>
         )}

@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 const DIFFICULTY_COLOR: Record<string, string> = {
-  accessible: "#2a7a3b",
-  intermediate: "#3b6ea5",
+  accessible: "var(--success)",
+  intermediate: "#b8791f",
   advanced: "#7b3fa0",
 };
 

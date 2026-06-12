@@ -20,6 +20,10 @@
   --accent-hover: #00009c;
   --accent-tint: #e6ecf8;  /* Mist — selected/hover */
   --accent-soft: #aebbe8;  /* muted Helsinki — chart fills */
+  --success: #2a7a3b;
+  --danger: #c0392b;
+  --danger-bg: #f7e7e3;
+  --danger-border: #e3bdb3;
   --shadow: 0 1px 2px rgba(21, 24, 31, 0.06);
 }
 
@@ -36,6 +40,10 @@
   --accent-hover: #a8b5ff;
   --accent-tint: #232739;
   --accent-soft: #49507a;  /* muted Helsinki — chart fills */
+  --success: #74c08a;
+  --danger: #c0392b;
+  --danger-bg: #2c1f1c;
+  --danger-border: #46332e;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
@@ -199,9 +207,9 @@ h1, h2, h3, h4 {
 }
 
 .tag-accent {
-  background: rgba(59, 110, 165, 0.08);
+  background: rgba(0, 0, 191, 0.08);
   color: var(--accent);
-  border-color: rgba(59, 110, 165, 0.2);
+  border-color: rgba(0, 0, 191, 0.2);
 }
 
 /* ===== Progress Dots ===== */
@@ -245,7 +253,7 @@ h1, h2, h3, h4 {
 /* ===== Framing Note ===== */
 
 .framing-note {
-  font-family: "Georgia", "Times New Roman", serif;
+  font-family: var(--font-serif), Georgia, serif;
   font-size: 1.05rem;
   line-height: 1.75;
   color: var(--text-primary);
@@ -312,8 +320,9 @@ h1, h2, h3, h4 {
 }
 
 .contribution-body {
-  font-size: 0.9rem;
-  line-height: 1.65;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 0.97rem;
+  line-height: 1.72;
   color: var(--text-primary);
 }
 
@@ -342,9 +351,9 @@ h1, h2, h3, h4 {
   font-size: 0.7rem;
   padding: 2px 7px;
   border-radius: 10px;
-  background: rgba(59, 110, 165, 0.06);
+  background: rgba(0, 0, 191, 0.06);
   color: var(--accent);
-  border: 1px solid rgba(59, 110, 165, 0.15);
+  border: 1px solid rgba(0, 0, 191, 0.15);
 }
 
 /* ===== Landscape Visualization ===== */
@@ -523,11 +532,11 @@ h1, h2, h3, h4 {
   font-size: 0.7rem;
   padding: 1px 5px;
   border-radius: 3px;
-  background: rgba(59, 110, 165, 0.1);
+  background: rgba(0, 0, 191, 0.1);
   color: var(--accent);
   cursor: pointer;
   margin: 0 1px;
-  border: 1px solid rgba(59, 110, 165, 0.2);
+  border: 1px solid rgba(0, 0, 191, 0.2);
   vertical-align: super;
 }
 
@@ -588,7 +597,7 @@ h1, h2, h3, h4 {
 
 .auth-error {
   font-size: 0.8rem;
-  color: #c44;
+  color: var(--danger);
   margin: 0;
 }
 
@@ -670,7 +679,7 @@ h1, h2, h3, h4 {
   height: 16px;
   padding: 0 3px;
   border-radius: 8px;
-  background: #e04040;
+  background: var(--danger);
   color: white;
   font-size: 0.65rem;
   font-weight: 700;
@@ -707,7 +716,7 @@ h1, h2, h3, h4 {
 }
 
 .notification-item.unread {
-  background: rgba(59, 110, 165, 0.04);
+  background: rgba(0, 0, 191, 0.04);
 }
 
 /* ===== Modal ===== */
@@ -872,9 +881,9 @@ h1, h2, h3, h4 {
 .btn-primary:hover { background: var(--accent-hover); color: white; }
 
 .btn-danger {
-  background: #c44;
+  background: var(--danger);
   color: white;
-  border-color: #c44;
+  border-color: var(--danger);
 }
 
 /* ===== Responsive ===== */

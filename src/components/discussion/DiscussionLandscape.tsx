@@ -85,7 +85,7 @@ export default function DiscussionLandscape({ stanceTags, activeFilter, onFilter
                     top: 0,
                     bottom: 0,
                     width: `${barWidth}%`,
-                    background: isActive ? "var(--accent)" : "rgba(59,110,165,0.45)",
+                    background: isActive ? "var(--accent)" : "rgba(0, 0, 191,0.45)",
                   }}
                 />
               </div>

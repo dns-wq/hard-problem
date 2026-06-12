@@ -20,7 +20,7 @@ export default function EditTopicPage({ params }: { params: Promise<{ id: string
   const { data: topic, isLoading, refetch } = trpc.topics.adminById.useQuery({ id });
 
   if (isLoading) return <p style={{ color: "var(--text-muted)" }}>Loading…</p>;
-  if (!topic) return <p style={{ color: "#c44" }}>Topic not found.</p>;
+  if (!topic) return <p style={{ color: "var(--danger)" }}>Topic not found.</p>;
 
   return (
     <div>
@@ -164,7 +164,7 @@ function DetailsTab({ topic, onSaved }: { topic: Topic; onSaved: () => void }) {
         <label className="form-label">Anchor source URL — optional</label>
         <input className="form-input" type="url" value={form.anchor_source_url} onChange={(e) => setForm((f) => ({ ...f, anchor_source_url: e.target.value }))} />
       </div>
-      {error && <p style={{ color: "#c44", fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</p>}
+      {error && <p style={{ color: "var(--danger)", fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</p>}
       <button type="submit" className="btn btn-primary" disabled={update.isPending}>
         {update.isPending ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
       </button>
@@ -193,15 +193,15 @@ function PapersTab({ topicId }: { topicId: string }) {
               <div>
                 <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.2rem" }}>
                   <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: p.role === "focal" ? "var(--accent)" : "var(--text-muted)" }}>{p.role}</span>
-                  {p.is_open_access && <span style={{ fontSize: "0.65rem", color: "#2a7a3b", background: "rgba(42,122,59,0.08)", padding: "1px 5px", borderRadius: 3, border: "1px solid rgba(42,122,59,0.15)" }}>Open access</span>}
-                  {p.hasExtraction ? <span style={{ fontSize: "0.65rem", color: "#3b6ea5", background: "rgba(59,110,165,0.08)", padding: "1px 5px", borderRadius: 3, border: "1px solid rgba(59,110,165,0.15)" }}>Docling ✓</span> : <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", background: "var(--bg-secondary)", padding: "1px 5px", borderRadius: 3 }}>No extraction</span>}
+                  {p.is_open_access && <span style={{ fontSize: "0.65rem", color: "var(--success)", background: "rgba(42,122,59,0.08)", padding: "1px 5px", borderRadius: 3, border: "1px solid rgba(42,122,59,0.15)" }}>Open access</span>}
+                  {p.hasExtraction ? <span style={{ fontSize: "0.65rem", color: "#3b6ea5", background: "rgba(0, 0, 191,0.08)", padding: "1px 5px", borderRadius: 3, border: "1px solid rgba(0, 0, 191,0.15)" }}>Docling ✓</span> : <span style={{ fontSize: "0.65rem", color: "var(--text-muted)", background: "var(--bg-secondary)", padding: "1px 5px", borderRadius: 3 }}>No extraction</span>}
                 </div>
                 <div style={{ fontSize: "0.9rem", fontWeight: 500 }}>{p.title}</div>
                 <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{p.authors}{p.year ? ` · ${p.year}` : ""}</div>
               </div>
               <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
                 <Link href={`/admin/topics/${topicId}/papers/new?edit=${p.id}`} className="btn" style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem" }}>Edit</Link>
-                <button className="btn" style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem", color: "#c44", borderColor: "#c44" }} onClick={() => { if (confirm(`Delete "${p.title}"?`)) deletePaper.mutate({ id: p.id }); }}>Delete</button>
+                <button className="btn" style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem", color: "var(--danger)", borderColor: "var(--danger)" }} onClick={() => { if (confirm(`Delete "${p.title}"?`)) deletePaper.mutate({ id: p.id }); }}>Delete</button>
               </div>
             </div>
           ))}
@@ -292,7 +292,7 @@ function QuizTab({ topicId }: { topicId: string }) {
                 <span style={{ fontSize: "0.7rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--text-muted)", marginRight: "0.5rem" }}>{q.question_type}</span>
                 <span style={{ fontSize: "0.9rem" }}>{q.question_text}</span>
               </div>
-              <button className="btn" style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem", color: "#c44", borderColor: "#c44", flexShrink: 0, marginLeft: "1rem" }} onClick={() => { if (confirm("Delete this question?")) deleteQ.mutate({ id: q.id }); }}>Delete</button>
+              <button className="btn" style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem", color: "var(--danger)", borderColor: "var(--danger)", flexShrink: 0, marginLeft: "1rem" }} onClick={() => { if (confirm("Delete this question?")) deleteQ.mutate({ id: q.id }); }}>Delete</button>
             </div>
           ))}
         </div>

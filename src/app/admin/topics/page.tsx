@@ -4,9 +4,9 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 
 const STATUS_COLOR: Record<string, string> = {
-  published: "#2a7a3b",
+  published: "var(--success)",
   draft: "#8a8f9c",
-  archived: "#c44",
+  archived: "var(--danger)",
 };
 
 export default function AdminTopicsPage() {
@@ -68,7 +68,7 @@ export default function AdminTopicsPage() {
                     {t.status === "published" && (
                       <button
                         className="btn"
-                        style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem", color: "#c44", borderColor: "#c44" }}
+                        style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem", color: "var(--danger)", borderColor: "var(--danger)" }}
                         onClick={() => { if (confirm("Archive this topic?")) archive.mutate({ id: t.id }); }}
                         disabled={archive.isPending}
                       >

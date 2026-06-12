@@ -161,7 +161,7 @@ export default function AIChatInterface({ topicId }: AIChatInterfaceProps) {
         )}
 
         {error && (
-          <p style={{ fontSize: "0.78rem", color: "#c44", padding: "0.25rem 0" }}>{error}</p>
+          <p style={{ fontSize: "0.78rem", color: "var(--danger)", padding: "0.25rem 0" }}>{error}</p>
         )}
 
         <div ref={messagesEndRef} />

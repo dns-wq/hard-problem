@@ -81,11 +81,11 @@ export default function AdminConceptsPage() {
           <form onSubmit={handleCreate}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Term <span style={{ color: "#c44" }}>*</span></label>
+                <label className="form-label">Term <span style={{ color: "var(--danger)" }}>*</span></label>
                 <input className="form-input" value={form.term} onChange={(e) => handleTermChange(e.target.value)} placeholder="Moral responsibility" required />
               </div>
               <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label">Slug <span style={{ color: "#c44" }}>*</span></label>
+                <label className="form-label">Slug <span style={{ color: "var(--danger)" }}>*</span></label>
                 <input
                   className="form-input"
                   value={form.slug}
@@ -97,7 +97,7 @@ export default function AdminConceptsPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Definition <span style={{ color: "#c44" }}>*</span></label>
+              <label className="form-label">Definition <span style={{ color: "var(--danger)" }}>*</span></label>
               <textarea className="form-textarea" value={form.definition} onChange={(e) => setForm((f) => ({ ...f, definition: e.target.value }))} placeholder="The obligation or accountability attributed to an agent…" style={{ minHeight: 80 }} required />
             </div>
 
@@ -111,7 +111,7 @@ export default function AdminConceptsPage() {
               <input className="form-input" value={form.related_terms} onChange={(e) => setForm((f) => ({ ...f, related_terms: e.target.value }))} placeholder="accountability, agency, culpability" />
             </div>
 
-            {formError && <p style={{ color: "#c44", fontSize: "0.85rem", marginBottom: "0.75rem" }}>{formError}</p>}
+            {formError && <p style={{ color: "var(--danger)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>{formError}</p>}
 
             <div style={{ display: "flex", gap: "0.75rem" }}>
               <button type="submit" className="btn btn-primary" disabled={createMut.isPending}>
@@ -169,7 +169,7 @@ export default function AdminConceptsPage() {
                       <button className="btn" style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem" }} onClick={() => startEdit(c)}>Edit</button>
                       <button
                         className="btn"
-                        style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem", color: "#c44", borderColor: "#c44" }}
+                        style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem", color: "var(--danger)", borderColor: "var(--danger)" }}
                         onClick={() => { if (confirm(`Delete "${c.term}"?`)) deleteMut.mutate({ id: c.id }); }}
                         disabled={deleteMut.isPending}
                       >

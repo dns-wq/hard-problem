@@ -91,13 +91,13 @@ export default function SettingsPage() {
             </label>
           </div>
 
-          {error && <p style={{ color: "#c44", fontSize: "0.85rem", marginBottom: "0.75rem" }}>{error}</p>}
+          {error && <p style={{ color: "var(--danger)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>{error}</p>}
 
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             <button type="submit" className="btn btn-primary" disabled={update.isPending}>
               {update.isPending ? "Saving…" : "Save changes"}
             </button>
-            {saved && <span style={{ fontSize: "0.82rem", color: "#2a7a3b" }}>Saved.</span>}
+            {saved && <span style={{ fontSize: "0.82rem", color: "var(--success)" }}>Saved.</span>}
           </div>
         </form>
       </section>

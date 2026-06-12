@@ -62,7 +62,7 @@ export default function NotificationsPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: "0.875rem", color: "var(--text-primary)", margin: "0 0 0.2rem" }}>
                     {n.type === "moderation" ? (
-                      <span style={{ color: "#c44" }}>{TYPE_LABEL.moderation}</span>
+                      <span style={{ color: "var(--danger)" }}>{TYPE_LABEL.moderation}</span>
                     ) : (
                       <>
                         <strong>{actor?.display_name ?? "Someone"}</strong>{" "}

@@ -69,13 +69,13 @@ export default function BuildOnModal({ topicId, parentId, parentAuthor, parentBo
               bottom: "0.5rem",
               right: "0.6rem",
               fontSize: "0.7rem",
-              color: body.length > MAX * 0.9 ? "#c44" : "var(--text-muted)",
+              color: body.length > MAX * 0.9 ? "var(--danger)" : "var(--text-muted)",
             }}>
               {body.length}/{MAX}
             </span>
           </div>
 
-          {error && <p style={{ color: "#c44", fontSize: "0.82rem", marginBottom: "0.75rem" }}>{error}</p>}
+          {error && <p style={{ color: "var(--danger)", fontSize: "0.82rem", marginBottom: "0.75rem" }}>{error}</p>}
 
           <div className="modal-actions">
             <button type="button" className="modal-btn" onClick={onClose}>Cancel</button>

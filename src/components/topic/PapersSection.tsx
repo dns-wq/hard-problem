@@ -11,7 +11,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 const ROLE_COLOR: Record<string, string> = {
   focal: "var(--accent)",
-  counter: "#c44",
+  counter: "var(--danger)",
   supplementary: "var(--text-muted)",
 };
 
@@ -86,7 +86,7 @@ export default function PapersSection({ papers }: PapersSectionProps) {
               {paper.abstract && (
                 <div style={{ marginTop: "0.6rem" }}>
                   {expandedAbstract.has(paper.id) ? (
-                    <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, margin: 0 }}>
+                    <p style={{ fontFamily: "var(--font-serif), Georgia, serif", fontSize: "0.95rem", color: "var(--text-secondary)", lineHeight: 1.65, margin: 0 }}>
                       {paper.abstract}
                     </p>
                   ) : null}

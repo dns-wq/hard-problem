@@ -65,7 +65,7 @@ export default function UpgradePage() {
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {FREE_FEATURES.map((f) => (
               <li key={f} style={{ fontSize: "0.85rem", color: "var(--text-secondary)", display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
-                <span style={{ color: "#2a7a3b", flexShrink: 0, marginTop: "0.05rem" }}>✓</span>
+                <span style={{ color: "var(--success)", flexShrink: 0, marginTop: "0.05rem" }}>✓</span>
                 {f}
               </li>
             ))}
@@ -109,7 +109,7 @@ export default function UpgradePage() {
               </li>
             ))}
           </ul>
-          {error && <p style={{ fontSize: "0.78rem", color: "#c44", marginBottom: "0.5rem" }}>{error}</p>}
+          {error && <p style={{ fontSize: "0.78rem", color: "var(--danger)", marginBottom: "0.5rem" }}>{error}</p>}
           <button
             type="button"
             className="btn btn-primary"

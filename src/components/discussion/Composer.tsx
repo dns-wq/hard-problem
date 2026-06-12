@@ -83,10 +83,10 @@ export default function Composer({ topicId, discussionPrompt, currentUserId, onS
                 width: 180,
               }}
             />
-            {error && <span style={{ fontSize: "0.78rem", color: "#c44" }}>{error}</span>}
+            {error && <span style={{ fontSize: "0.78rem", color: "var(--danger)" }}>{error}</span>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "0.72rem", color: body.length > MAX * 0.9 ? "#c44" : "var(--text-muted)" }}>
+            <span style={{ fontSize: "0.72rem", color: body.length > MAX * 0.9 ? "var(--danger)" : "var(--text-muted)" }}>
               {body.length}/{MAX}
             </span>
             <button
