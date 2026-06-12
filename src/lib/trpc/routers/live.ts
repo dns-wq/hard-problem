@@ -1,9 +1,17 @@
 import { randomInt } from "node:crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/server";
 import { LIVE_CODE_ALPHABET, LIVE_CODE_REGEX } from "@/lib/liveCode";
-import type { CurrentSpotlight, DrawResult, SpotlightHistoryRow } from "@/types/database";
+import type {
+  CurrentSpotlight,
+  DrawResult,
+  SpotlightHistoryRow,
+  CurrentQuizRound,
+  QuizAggregateRow,
+  QuizLeaderboardRow,
+} from "@/types/database";
 
 // Live Sessions (Sprint 1) — see docs/sprint-1-live-sessions.md.
 // The 6-char session code is a held capability: pre-join interactions go
@@ -32,6 +40,16 @@ function rpcErrorIncludes(error: { message?: string } | null, token: string) {
   return error?.message?.includes(token) ?? false;
 }
 
+// Service-role client for the few writes RLS deliberately forbids the user
+// client (reminder notifications — the table has no INSERT policy; stamping the
+// pinned reminders_sent_at column). Mirrors the stripe/webhook admin pattern.
+function getAdminClient() {
+  return createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
+
 export const liveRouter = createTRPCRouter({
   // Create a session for a published topic with 2-6 snapshotted vote options (protected)
   create: protectedProcedure
@@ -49,6 +67,8 @@ export const liveRouter = createTRPCRouter({
           .min(0) // raffle sessions have no vote options; the body enforces ≥2 otherwise
           .max(6),
         raffleMode: z.boolean().optional(),
+        startsAt: z.string().datetime().optional(),
+        publish: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -113,6 +133,15 @@ export const liveRouter = createTRPCRouter({
             .eq("host_id", ctx.user.id);
           throw optionsError;
         }
+      }
+
+      // Optional: schedule + publish in the same step (definer RPC owns the pinned columns)
+      if (input.startsAt) {
+        await ctx.supabase.rpc("schedule_live_session", {
+          p_session_id: session.id,
+          p_starts_at: input.startsAt,
+          p_publish: input.publish ?? true,
+        });
       }
 
       return session;
@@ -488,11 +517,289 @@ export const liveRouter = createTRPCRouter({
       if (error) throw error;
     }),
 
+  // ===== Live Quiz (Sprint 3) =====
+
+  // Host pushes a quiz_questions row to the room (snapshotted into a round) (protected)
+  pushQuizQuestion: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), quizQuestionId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("push_live_quiz_round", {
+        p_session_id: input.sessionId,
+        p_quiz_question_id: input.quizQuestionId,
+      });
+      if (error) {
+        if (rpcErrorIncludes(error, "forbidden")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only the host can run the quiz." });
+        }
+        if (rpcErrorIncludes(error, "session_closed")) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Open voting before running the quiz." });
+        }
+        if (rpcErrorIncludes(error, "question_topic_mismatch")) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "That question isn't from this session's topic." });
+        }
+        if (rpcErrorIncludes(error, "question_not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Quiz question not found." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Session not found." });
+        }
+        throw error;
+      }
+      return data?.[0] ?? null;
+    }),
+
+  // The current quiz round (or null) — correct answer withheld until reveal (protected)
+  currentQuizRound: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_current_quiz_round", { p_session_id: input.sessionId });
+      if (error) {
+        if (rpcErrorIncludes(error, "forbidden")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Join the session to see the quiz." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Session not found." });
+        }
+        throw error;
+      }
+      return (data?.[0] ?? null) as CurrentQuizRound | null;
+    }),
+
+  // Submit an answer to the current round — first answer wins (lock-in) (protected)
+  submitQuizAnswer: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), roundId: z.string().uuid(), answer: z.string().min(1).max(100) }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("submit_live_quiz_answer", {
+        p_session_id: input.sessionId,
+        p_round_id: input.roundId,
+        p_answer: input.answer,
+      });
+      if (error) {
+        if (rpcErrorIncludes(error, "round_closed")) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "This question is closed." });
+        }
+        if (rpcErrorIncludes(error, "forbidden")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Join the session to answer." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Session not found." });
+        }
+        throw error;
+      }
+    }),
+
+  // Host reveals the round — grades + speed-scores every answer (protected)
+  revealQuizRound: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), roundId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("reveal_live_quiz_round", {
+        p_session_id: input.sessionId,
+        p_round_id: input.roundId,
+      });
+      if (error) {
+        if (rpcErrorIncludes(error, "forbidden")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only the host can reveal answers." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Round not found." });
+        }
+        throw error;
+      }
+    }),
+
+  // Per-round answer distribution — host anytime, room once revealed (protected)
+  quizAggregate: protectedProcedure
+    .input(z.object({ roundId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_live_quiz_aggregate", { p_round_id: input.roundId });
+      if (error) {
+        if (rpcErrorIncludes(error, "forbidden")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Answers appear once the host reveals them." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Round not found." });
+        }
+        throw error;
+      }
+      return ((data ?? []) as QuizAggregateRow[]).map((r) => ({
+        answer_label: r.answer_label,
+        vote_count: Number(r.vote_count),
+      }));
+    }),
+
+  // Cumulative leaderboard — host anytime; room when public + a round revealed (protected)
+  quizLeaderboard: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_live_quiz_leaderboard", { p_session_id: input.sessionId });
+      if (error) {
+        if (rpcErrorIncludes(error, "forbidden")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "The leaderboard isn't open yet." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Session not found." });
+        }
+        throw error;
+      }
+      return ((data ?? []) as QuizLeaderboardRow[]).map((r) => ({
+        user_id: r.user_id,
+        display_name: r.display_name,
+        total_score: Number(r.total_score),
+        correct_count: Number(r.correct_count),
+      }));
+    }),
+
+  // Host toggles whether the room sees the named leaderboard (protected)
+  setQuizLeaderboardPublic: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), isPublic: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase
+        .from("live_sessions")
+        .update({ quiz_leaderboard_public: input.isPublic, updated_at: new Date().toISOString() })
+        .eq("id", input.sessionId)
+        .eq("host_id", ctx.user.id); // RLS-equivalent host guard
+      if (error) throw error;
+    }),
+
+  // ===== Scheduling (Sprint 5) =====
+
+  // Host schedules the session for a future time and optionally publishes it (protected)
+  schedule: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), startsAt: z.string().datetime(), publish: z.boolean().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("schedule_live_session", {
+        p_session_id: input.sessionId,
+        p_starts_at: input.startsAt,
+        p_publish: input.publish ?? true,
+      });
+      if (error) {
+        if (rpcErrorIncludes(error, "forbidden")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only the host can schedule." });
+        }
+        if (rpcErrorIncludes(error, "session_closed")) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Schedule before opening the session." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Session not found." });
+        }
+        throw error;
+      }
+    }),
+
+  // RSVP to a published scheduled session (protected)
+  rsvp: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("rsvp_live_session", { p_session_id: input.sessionId });
+      if (error) {
+        if (rpcErrorIncludes(error, "not_published")) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "This session isn't open for RSVPs yet." });
+        }
+        if (rpcErrorIncludes(error, "profile_missing")) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Your account profile is incomplete — try signing out and back in." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Session not found." });
+        }
+        throw error;
+      }
+    }),
+
+  // Withdraw your RSVP — own-row DELETE (protected)
+  withdrawRsvp: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase
+        .from("live_rsvps")
+        .delete()
+        .eq("session_id", input.sessionId)
+        .eq("user_id", ctx.user.id);
+      if (error) throw error;
+    }),
+
+  // The caller's upcoming RSVPs (definer RPC — an RSVP isn't a participant) (protected)
+  myRsvps: protectedProcedure.query(async ({ ctx }) => {
+    const { data, error } = await ctx.supabase.rpc("get_my_upcoming_rsvps");
+    if (error) throw error;
+    return data ?? [];
+  }),
+
+  // Post-session recap aggregates — host anytime; members once revealed/ended (protected)
+  recapSummary: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_session_recap", { p_session_id: input.sessionId });
+      if (error) {
+        if (rpcErrorIncludes(error, "forbidden")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "The recap opens once the host reveals results." });
+        }
+        if (rpcErrorIncludes(error, "not_found")) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Session not found." });
+        }
+        throw error;
+      }
+      const r = data?.[0];
+      if (!r) return null;
+      return {
+        participant_count: Number(r.participant_count),
+        rsvp_count: Number(r.rsvp_count),
+        vote_count: Number(r.vote_count),
+        spotlight_count: Number(r.spotlight_count),
+        spotlight_shared: Number(r.spotlight_shared),
+        quiz_rounds: Number(r.quiz_rounds),
+        quiz_answers: Number(r.quiz_answers),
+      };
+    }),
+
+  // Opportunistic reminder dispatch — the host dashboard fires this near session
+  // time. Reminder rows + the pinned reminders_sent_at stamp need service-role
+  // (notifications has no INSERT policy); reminders_sent_at makes it idempotent (protected)
+  dispatchDueReminders: protectedProcedure.mutation(async ({ ctx }) => {
+    const now = Date.now();
+    const { data: due } = await ctx.supabase
+      .from("live_sessions")
+      .select("id, host_id, topic_id")
+      .eq("host_id", ctx.user.id)
+      .eq("status", "lobby")
+      .eq("published", true)
+      .is("reminders_sent_at", null)
+      .gte("starts_at", new Date(now - 15 * 60 * 1000).toISOString()) // 15-min grace for a just-passed start
+      .lte("starts_at", new Date(now + 60 * 60 * 1000).toISOString());
+    if (!due?.length) return { dispatched: 0 };
+
+    const admin = getAdminClient();
+    let dispatched = 0;
+    for (const s of due as { id: string; host_id: string; topic_id: string }[]) {
+      // Atomic claim: whoever flips null→timestamp first owns this dispatch (the
+      // loser's conditional update matches 0 rows). Closes the double-send race
+      // when the host has two tabs open.
+      const { data: claimed } = await admin
+        .from("live_sessions")
+        .update({ reminders_sent_at: new Date().toISOString() })
+        .eq("id", s.id)
+        .is("reminders_sent_at", null)
+        .select("id");
+      if (!claimed?.length) continue;
+
+      const { data: rsvps } = await ctx.supabase.from("live_rsvps").select("user_id").eq("session_id", s.id);
+      const recipients = new Set<string>([s.host_id, ...((rsvps ?? []) as { user_id: string }[]).map((r) => r.user_id)]);
+      const rows = [...recipients].map((uid) => ({ user_id: uid, type: "session_reminder", session_id: s.id, topic_id: s.topic_id }));
+      const { error: insErr } = await admin.from("notifications").insert(rows);
+      if (insErr) {
+        // Stay claimed (no infinite retry spin); surface for observability
+        console.error("[live] reminder insert failed", s.id, insErr.message);
+        continue;
+      }
+      dispatched++;
+    }
+    return { dispatched };
+  }),
+
   // Sessions hosted by the caller — the lost-projector-tab recovery list on /live (protected)
   mySessions: protectedProcedure.query(async ({ ctx }) => {
     const { data, error } = await ctx.supabase
       .from("live_sessions")
-      .select("id, code, status, created_at, topic:topics(id, title, slug)")
+      .select("id, code, status, created_at, starts_at, published, topic:topics(id, title, slug)")
       .eq("host_id", ctx.user.id)
       .order("created_at", { ascending: false })
       .limit(20);

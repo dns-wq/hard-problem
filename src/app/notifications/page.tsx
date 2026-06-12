@@ -7,6 +7,7 @@ const TYPE_LABEL: Record<string, string> = {
   build_on: "built on your contribution",
   reply: "reacted to your contribution",
   moderation: "your contribution was removed by a moderator",
+  session_reminder: "your live session starts soon",
 };
 
 export default function NotificationsPage() {

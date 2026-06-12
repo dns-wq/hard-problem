@@ -29,7 +29,9 @@ export default function TallyBars({ options, total, highlightOptionId, large }: 
       {options.map(({ optionId, label, count }) => {
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
         const barWidth = (count / max) * 100;
-        const isMine = highlightOptionId === optionId;
+        // Case-insensitive: the quiz aggregate lowercases T/F labels while the
+        // stored correct_answer keeps its authored casing
+        const isMine = highlightOptionId != null && highlightOptionId.toLowerCase() === optionId.toLowerCase();
 
         return (
           <div key={optionId}>

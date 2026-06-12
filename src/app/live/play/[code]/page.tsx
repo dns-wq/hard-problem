@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { trpc } from "@/lib/trpc/client";
-import { usePlaySessionChannel } from "@/components/live/useLiveChannels";
+import { usePlaySessionChannel, useReactionsChannel } from "@/components/live/useLiveChannels";
 import TallyBars from "@/components/live/TallyBars";
 import SpotlightCallout from "@/components/live/SpotlightCallout";
 import SpotlightOtherView from "@/components/live/SpotlightOtherView";
+import QuizQuestionCard from "@/components/live/QuizQuestionCard";
+import QuizLeaderboard from "@/components/live/QuizLeaderboard";
+import ReactionBar from "@/components/live/ReactionBar";
+import ReactionBurstLayer, { type ReactionBurst } from "@/components/live/ReactionBurstLayer";
+import type { ReactionKind } from "@/types/database";
 
 function PlayInner({ code }: { code: string }) {
   const [user, setUser] = useState<User | null>(null);
@@ -80,6 +85,35 @@ function PlayInner({ code }: { code: string }) {
     onSuccess: () => currentSpotlightQuery.refetch(),
   });
 
+  // Quiz (orthogonal — rides the same voting/revealed window)
+  const currentQuizRoundQuery = trpc.live.currentQuizRound.useQuery(
+    { sessionId: preview?.id ?? "" },
+    { enabled: !!preview?.id && isMember && spotlightActive },
+  );
+  const quizRound = currentQuizRoundQuery.data ?? null;
+  const submitQuizAnswer = trpc.live.submitQuizAnswer.useMutation({
+    onSuccess: () => currentQuizRoundQuery.refetch(),
+  });
+  // Clear a stale submit error when the host moves to a new question
+  useEffect(() => {
+    submitQuizAnswer.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quizRound?.round_id]);
+  const quizLeaderboardQuery = trpc.live.quizLeaderboard.useQuery(
+    { sessionId: preview?.id ?? "" },
+    { enabled: !!preview?.id && isMember && quizRound?.status === "revealed", retry: false },
+  );
+
+  // Reactions — ephemeral broadcast; the burst list is pruned after each animation
+  const [bursts, setBursts] = useState<ReactionBurst[]>([]);
+  const burstSeq = useRef(0);
+  const addBurst = useCallback((kind: ReactionKind) => {
+    const id = `${Date.now()}-${burstSeq.current++}`;
+    setBursts((b) => [...b, { id, kind, left: 10 + Math.random() * 80 }]);
+    setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 2100);
+  }, []);
+  const sendReaction = useReactionsChannel(preview?.id, isMember && spotlightActive, addBurst);
+
   // Consent: "open to being called on" (default true). Synced from the server
   // so a reconnect reflects the real value, toggleable while in the room.
   const [callablePref, setCallablePref] = useState(true);
@@ -109,8 +143,12 @@ function PlayInner({ code }: { code: string }) {
     if (!memberPolling || !preview?.id) return;
     const interval = setInterval(() => {
       sessionQuery.refetch();
-      // The "it's you" callout must surface within 5s even with no websocket
-      if (spotlightActive) currentSpotlightQuery.refetch();
+      // The "it's you" callout and the live quiz must surface within 5s even
+      // with no websocket
+      if (spotlightActive) {
+        currentSpotlightQuery.refetch();
+        currentQuizRoundQuery.refetch();
+      }
     }, 5000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -133,6 +171,7 @@ function PlayInner({ code }: { code: string }) {
   usePlaySessionChannel(preview?.id, isMember, (next) => {
     sessionQuery.refetch();
     currentSpotlightQuery.refetch(); // a draw / clear flips the session pointer
+    currentQuizRoundQuery.refetch(); // a quiz push / reveal re-touches the pointer
     if (next.status === "revealed" || next.status === "ended") {
       utils.live.tally.invalidate({ sessionId: next.id });
     }
@@ -260,6 +299,27 @@ function PlayInner({ code }: { code: string }) {
         ) : !spotlight.is_you ? (
           <SpotlightOtherView spotlight={spotlight} />
         ) : null
+      )}
+
+      {/* Live quiz: participants answer; the host runs it from the host screen */}
+      {isMember && spotlightActive && !preview.is_host && quizRound && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <QuizQuestionCard
+            key={quizRound.round_id}
+            round={quizRound}
+            busy={submitQuizAnswer.isPending}
+            errorMessage={submitQuizAnswer.error?.message || undefined}
+            onAnswer={(answer) => submitQuizAnswer.mutate({ sessionId: preview.id, roundId: quizRound.round_id, answer })}
+          />
+          {quizRound.status === "revealed" && !!quizLeaderboardQuery.data?.length && (
+            <div style={{ marginTop: "1.25rem" }}>
+              <h3 style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
+                Leaderboard
+              </h3>
+              <QuizLeaderboard rows={quizLeaderboardQuery.data} meId={user?.id} />
+            </div>
+          )}
+        </div>
       )}
 
       {/* Not yet a member while the room is live: joining / join-failed states */}
@@ -396,6 +456,13 @@ function PlayInner({ code }: { code: string }) {
           )}
         </div>
       )}
+
+      {isMember && spotlightActive && (
+        <div style={{ position: "sticky", bottom: 0, marginTop: "2rem", padding: "0.75rem 0", background: "var(--bg-surface)", borderTop: "1px solid var(--border-light)" }}>
+          <ReactionBar onReact={sendReaction} />
+        </div>
+      )}
+      <ReactionBurstLayer bursts={bursts} />
     </div>
   );
 }

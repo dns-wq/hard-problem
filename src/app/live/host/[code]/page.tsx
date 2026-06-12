@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import QRCode from "react-qr-code";
@@ -9,12 +9,17 @@ import {
   usePlaySessionChannel,
   useHostSessionChannel,
   useSpotlightDrawsChannel,
+  useQuizAnswersChannel,
+  useReactionsChannel,
 } from "@/components/live/useLiveChannels";
 import TallyBars from "@/components/live/TallyBars";
 import ConfirmModal from "@/components/live/ConfirmModal";
 import SpotlightStage from "@/components/live/SpotlightStage";
 import SpotlightHistory from "@/components/live/SpotlightHistory";
-import type { SpotlightMode } from "@/types/database";
+import QuizPushPicker from "@/components/live/QuizPushPicker";
+import QuizLeaderboard from "@/components/live/QuizLeaderboard";
+import ReactionBurstLayer, { type ReactionBurst } from "@/components/live/ReactionBurstLayer";
+import type { SpotlightMode, ReactionKind } from "@/types/database";
 
 type HostAction = "revealed" | "voting" | "ended";
 
@@ -46,6 +51,9 @@ export default function HostSessionPage() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [selectedMode, setSelectedMode] = useState<SpotlightMode>("uniform");
   const [drawError, setDrawError] = useState("");
+  const [quizError, setQuizError] = useState("");
+  const [bursts, setBursts] = useState<ReactionBurst[]>([]);
+  const burstSeq = useRef(0);
 
   useEffect(() => setOrigin(window.location.origin), []);
 
@@ -84,6 +92,29 @@ export default function HostSessionPage() {
     { enabled: !!preview?.id && isHost && spotlightActive },
   );
 
+  // Quiz (orthogonal — same voting/revealed window as the spotlight)
+  const quizQuestionsQuery = trpc.quiz.byTopic.useQuery(
+    { topicId: preview?.topic_id ?? "" },
+    { enabled: !!preview?.topic_id && isHost && spotlightActive },
+  );
+  const currentQuizRoundQuery = trpc.live.currentQuizRound.useQuery(
+    { sessionId: preview?.id ?? "" },
+    { enabled: !!preview?.id && isHost && spotlightActive },
+  );
+  const quizRound = currentQuizRoundQuery.data ?? null;
+  const quizAggregateQuery = trpc.live.quizAggregate.useQuery(
+    { roundId: quizRound?.round_id ?? "" },
+    { enabled: !!quizRound?.round_id && isHost },
+  );
+  const quizLeaderboardQuery = trpc.live.quizLeaderboard.useQuery(
+    { sessionId: preview?.id ?? "" },
+    { enabled: !!preview?.id && isHost && spotlightActive },
+  );
+  const recapQuery = trpc.live.recapSummary.useQuery(
+    { sessionId: preview?.id ?? "" },
+    { enabled: !!preview?.id && isHost && (status === "ended" || status === "revealed") },
+  );
+
   // Polling fallback while the room is active: a dropped websocket degrades
   // to 5s staleness, not a frozen projector. During voting the tally IS the
   // screen — it must be polled too, not just the session row.
@@ -99,6 +130,9 @@ export default function HostSessionPage() {
       if (spotlightActive) {
         currentSpotlightQuery.refetch();
         drawHistoryQuery.refetch();
+        currentQuizRoundQuery.refetch();
+        quizAggregateQuery.refetch();
+        quizLeaderboardQuery.refetch();
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -114,6 +148,8 @@ export default function HostSessionPage() {
     tallyQuery.refetch();
     currentSpotlightQuery.refetch(); // a draw flips the session pointer
     drawHistoryQuery.refetch();
+    currentQuizRoundQuery.refetch(); // a quiz push / reveal re-touches the pointer
+    quizAggregateQuery.refetch();
   });
   useHostSessionChannel(preview?.id, isHost && status !== "ended", () => {
     sessionQuery.refetch();
@@ -125,6 +161,18 @@ export default function HostSessionPage() {
     currentSpotlightQuery.refetch();
     drawHistoryQuery.refetch();
   });
+  // Host-only: quiz answers stream (high volume). Phones never subscribe here.
+  useQuizAnswersChannel(preview?.id, isHost && spotlightActive, () => {
+    currentQuizRoundQuery.refetch(); // answer_count
+    quizAggregateQuery.refetch();
+    quizLeaderboardQuery.refetch();
+  });
+  const addBurst = useCallback((kind: ReactionKind) => {
+    const id = `${Date.now()}-${burstSeq.current++}`;
+    setBursts((b) => [...b, { id, kind, left: 10 + Math.random() * 80 }]);
+    setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 2100);
+  }, []);
+  useReactionsChannel(preview?.id, isHost && spotlightActive, addBurst);
 
   const setStatus = trpc.live.setStatus.useMutation({
     onSuccess: () => {
@@ -167,6 +215,27 @@ export default function HostSessionPage() {
       drawHistoryQuery.refetch();
     },
     onError: (e) => setDrawError(e.message),
+  });
+
+  const pushQuiz = trpc.live.pushQuizQuestion.useMutation({
+    onSuccess: () => {
+      setQuizError("");
+      currentQuizRoundQuery.refetch();
+      quizAggregateQuery.refetch();
+    },
+    onError: (e) => setQuizError(e.message),
+  });
+  const revealQuiz = trpc.live.revealQuizRound.useMutation({
+    onSuccess: () => {
+      setQuizError("");
+      currentQuizRoundQuery.refetch();
+      quizAggregateQuery.refetch();
+      quizLeaderboardQuery.refetch();
+    },
+    onError: (e) => setQuizError(e.message),
+  });
+  const setLeaderboardPublic = trpc.live.setQuizLeaderboardPublic.useMutation({
+    onSuccess: () => sessionQuery.refetch(),
   });
 
   if (byCode.isLoading) {
@@ -241,8 +310,80 @@ export default function HostSessionPage() {
     </div>
   ) : null;
 
+  const quizQuestions = quizQuestionsQuery.data ?? [];
+  const quizDist = quizAggregateQuery.data ?? [];
+  const quizLeaders = quizLeaderboardQuery.data ?? [];
+
+  const quizBlock = canDraw && !raffle ? (
+    <div style={{ marginTop: "2.5rem", borderTop: "1px solid var(--border-light)", paddingTop: "1.5rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1rem" }}>
+        <h2 style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>Quiz</h2>
+        {quizLeaders.length > 0 && (
+          <button
+            type="button"
+            className="live-chip"
+            onClick={() => setLeaderboardPublic.mutate({ sessionId: preview.id, isPublic: !session?.quiz_leaderboard_public })}
+          >
+            {session?.quiz_leaderboard_public ? "Hide leaderboard from room" : "Show leaderboard to room"}
+          </button>
+        )}
+      </div>
+
+      {quizRound && (
+        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+          <p style={{ fontSize: "1.4rem", fontWeight: 700, lineHeight: 1.3 }}>{quizRound.question_text}</p>
+          {quizRound.status === "asking" ? (
+            <div style={{ marginTop: "1rem" }}>
+              <p style={{ fontSize: "1.1rem", color: "var(--text-secondary)" }}>{quizRound.answer_count} answered</p>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ marginTop: "1rem" }}
+                disabled={revealQuiz.isPending}
+                onClick={() => revealQuiz.mutate({ sessionId: preview.id, roundId: quizRound.round_id })}
+              >
+                {revealQuiz.isPending ? "Revealing…" : "Reveal answers"}
+              </button>
+            </div>
+          ) : (
+            <div style={{ marginTop: "1rem" }}>
+              <TallyBars
+                options={quizDist.map((d) => ({ optionId: d.answer_label, label: d.answer_label, count: d.vote_count }))}
+                total={quizDist.reduce((s, d) => s + d.vote_count, 0)}
+                highlightOptionId={quizRound.correct_answer}
+                large
+              />
+              <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: "0.6rem" }}>
+                Correct answer: <strong>{quizRound.correct_answer}</strong>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {quizError && <p className="auth-error" style={{ textAlign: "center", marginBottom: "0.75rem" }}>{quizError}</p>}
+
+      <QuizPushPicker
+        questions={quizQuestions}
+        currentQuestionId={quizRound?.quiz_question_id ?? null}
+        busy={pushQuiz.isPending}
+        onPush={(id) => pushQuiz.mutate({ sessionId: preview.id, quizQuestionId: id })}
+      />
+
+      {quizLeaders.length > 0 && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <h3 style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.6rem" }}>
+            Leaderboard{session?.quiz_leaderboard_public ? "" : " (hidden from room)"}
+          </h3>
+          <QuizLeaderboard rows={quizLeaders} large />
+        </div>
+      )}
+    </div>
+  ) : null;
+
   return (
     <div className="page" style={{ maxWidth: 900 }}>
+      <ReactionBurstLayer bursts={bursts} />
       {/* Header: topic + question, or neutral raffle framing, distance-readable */}
       <div style={{ textAlign: "center", marginBottom: "2rem" }}>
         <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>
@@ -282,6 +423,18 @@ export default function HostSessionPage() {
               Cancel session
             </button>
           </div>
+
+          {session?.published && origin && (
+            <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border-light)" }}>
+              <p style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.4rem" }}>
+                Collecting RSVPs
+              </p>
+              <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>Share this link so people can reserve a spot:</p>
+              <code style={{ display: "inline-block", marginTop: "0.5rem", fontSize: "0.85rem", color: "var(--accent)", wordBreak: "break-all" }}>
+                {origin}/live/rsvp?code={code}
+              </code>
+            </div>
+          )}
         </div>
       )}
 
@@ -331,6 +484,8 @@ export default function HostSessionPage() {
 
       {spotlightBlock}
 
+      {quizBlock}
+
       {status === "ended" && (
         <div style={{ textAlign: "center", paddingTop: "1rem" }}>
           <p style={{ fontSize: "1.2rem", color: "var(--text-secondary)" }}>
@@ -339,6 +494,32 @@ export default function HostSessionPage() {
           <div style={{ marginTop: "1.5rem", maxWidth: 640, marginLeft: "auto", marginRight: "auto" }}>
             <TallyBars options={tally?.options ?? []} total={tally?.total ?? 0} />
           </div>
+
+          {recapQuery.data && (
+            <div style={{ marginTop: "2rem" }}>
+              <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+                Session recap
+              </h2>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "0.6rem", maxWidth: 640, margin: "0 auto" }}>
+                {[
+                  { label: "Participants", value: recapQuery.data.participant_count },
+                  { label: "RSVPs", value: recapQuery.data.rsvp_count },
+                  { label: "Votes", value: recapQuery.data.vote_count },
+                  { label: "Called on", value: recapQuery.data.spotlight_count },
+                  { label: "Quiz answers", value: recapQuery.data.quiz_answers },
+                ].map((s) => (
+                  <div key={s.label} style={{ padding: "0.85rem", background: "var(--bg-surface)", border: "1px solid var(--border-light)", borderRadius: 10 }}>
+                    <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--accent)" }}>{s.value}</div>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <a href={`/api/live/${preview.id}/recap`} className="btn" style={{ marginTop: "1.25rem", display: "inline-block", textDecoration: "none" }}>
+                Export CSV
+              </a>
+            </div>
+          )}
+
           <Link
             href={`/topics/${preview.topic_slug}/discuss`}
             className="btn btn-primary"

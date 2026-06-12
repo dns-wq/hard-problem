@@ -10,7 +10,7 @@ export type PaperRole = "focal" | "counter" | "supplementary";
 export type RelationshipType = "build_on" | "reply";
 export type ReactionType = "great_point" | "interesting" | "i_disagree" | "thumbs_up";
 export type QuestionType = "mcq" | "true_false";
-export type NotificationType = "build_on" | "reply" | "moderation";
+export type NotificationType = "build_on" | "reply" | "moderation" | "session_reminder";
 
 export interface User {
   id: string;
@@ -25,6 +25,7 @@ export interface User {
   subscription_current_period_end: string | null;
   created_at: string;
   updated_at: string;
+  live_transcript_public: boolean; // 008_live_transcript.sql (opt-in, default false)
 }
 
 export interface RealWorldAnchor {
@@ -159,6 +160,7 @@ export interface Notification {
   actor_id: string | null;
   contribution_id: string | null;
   topic_id: string | null;
+  session_id: string | null; // 009_live_scheduling.sql (session_reminder)
   is_read: boolean;
   created_at: string;
   // Joined fields
@@ -213,6 +215,13 @@ export interface LiveSession {
   raffle_mode: boolean;
   current_spotlight_draw_id: string | null;
   spotlight_cycle: number;
+  // 007_live_quiz.sql
+  current_quiz_round_id: string | null;
+  quiz_leaderboard_public: boolean;
+  // 009_live_scheduling.sql
+  starts_at: string | null;
+  published: boolean;
+  reminders_sent_at: string | null;
 }
 
 export interface LiveSessionOption {
@@ -251,6 +260,9 @@ export interface LiveSessionPreview {
   topic_slug: string;
   is_host: boolean;
   is_participant: boolean;
+  // 009_live_scheduling.sql (the RSVP page advertises the time pre-join)
+  starts_at: string | null;
+  published: boolean;
 }
 
 // One row per option from the get_live_tally RPC
@@ -321,4 +333,110 @@ export interface SpotlightHistoryRow {
   last_outcome: SpotlightOutcome | null;
   last_sequence: number | null;
   participant_count: number;
+}
+
+// ===== Live Quiz (007_live_quiz.sql) =====
+
+export type QuizRoundStatus = "asking" | "revealed";
+export type QuizQuestionType = "mcq" | "true_false";
+export interface QuizOption {
+  label: string;
+  text: string;
+}
+
+export interface LiveQuizRound {
+  id: string;
+  session_id: string;
+  quiz_question_id: string | null;
+  sequence: number;
+  question_text: string;
+  question_type: QuizQuestionType;
+  options: QuizOption[] | null;
+  correct_answer: string;
+  explanation: string | null;
+  answer_window_sec: number;
+  status: QuizRoundStatus;
+  answer_count: number;
+  asked_at: string;
+  revealed_at: string | null;
+}
+
+export interface LiveQuizAnswer {
+  session_id: string;
+  round_id: string;
+  user_id: string;
+  answer: string;
+  is_correct: boolean | null;
+  score: number;
+  created_at: string;
+}
+
+// Shape from get_current_quiz_round — correct_answer/explanation are null to
+// non-host members until the round is revealed.
+export interface CurrentQuizRound {
+  round_id: string;
+  quiz_question_id: string | null;
+  sequence: number;
+  question_text: string;
+  question_type: QuizQuestionType;
+  options: QuizOption[] | null;
+  correct_answer: string | null;
+  explanation: string | null;
+  status: QuizRoundStatus;
+  answer_window_sec: number;
+  answer_count: number;
+  asked_at: string;
+  my_answer: string | null;
+  my_is_correct: boolean | null;
+}
+
+export interface QuizAggregateRow {
+  answer_label: string;
+  vote_count: number;
+}
+
+export interface QuizLeaderboardRow {
+  user_id: string;
+  display_name: string;
+  total_score: number;
+  correct_count: number;
+}
+
+// Ephemeral broadcast reactions (no DB table)
+export type ReactionKind = "applause" | "laugh" | "mindblown" | "heart";
+
+// ===== Live Transcript (008_live_transcript.sql) =====
+
+export interface LiveTranscriptCounts {
+  sessions_attended: number;
+  votes_cast: number;
+  times_spotlighted: number;
+  times_shared: number;
+  steelman_count: number;
+  quiz_passed_topics: number;
+}
+
+// Shape from get_live_transcript — counts + the target's publish setting
+export interface LiveTranscript extends LiveTranscriptCounts {
+  is_public: boolean;
+}
+
+// ===== Live Scheduling (009_live_scheduling.sql) =====
+
+export interface LiveRsvp {
+  session_id: string;
+  user_id: string;
+  display_name: string;
+  created_at: string;
+}
+
+// Shape from get_session_recap — scalar aggregates only
+export interface SessionRecap {
+  participant_count: number;
+  rsvp_count: number;
+  vote_count: number;
+  spotlight_count: number;
+  spotlight_shared: number;
+  quiz_rounds: number;
+  quiz_answers: number;
 }

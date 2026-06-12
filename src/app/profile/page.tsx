@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import ProgressIndicator from "@/components/topic/ProgressIndicator";
+import LiveTranscript from "@/components/profile/LiveTranscript";
 
 export default function ProfilePage() {
   const { data: profile, isLoading } = trpc.profile.me.useQuery();
   const { data: stats } = trpc.profile.stats.useQuery();
+  const { data: transcript } = trpc.profile.liveTranscript.useQuery();
   const { data: myContributions } = trpc.profile.myContributions.useQuery({ limit: 10 });
 
   if (isLoading) {
@@ -67,6 +69,16 @@ export default function ProfilePage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Continuing-education transcript (live sessions) */}
+      {transcript && (
+        <section style={{ marginBottom: "2rem" }}>
+          <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+            Continuing-education transcript
+          </h2>
+          <LiveTranscript counts={transcript.counts} stamps={transcript.stamps} isPrivate={!transcript.isPublic} />
+        </section>
       )}
 
       {/* Topic progress */}

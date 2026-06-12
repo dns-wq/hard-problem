@@ -132,9 +132,12 @@ function NotificationItem({ notification: n }: { notification: Notification }) {
       ? `${actorName} built on your contribution in "${topicTitle}"`
       : n.type === "reply"
       ? `${actorName} reacted to your contribution in "${topicTitle}"`
+      : n.type === "session_reminder"
+      ? `Your live session on "${topicTitle}" starts soon`
       : `Your contribution in "${topicTitle}" was removed by a moderator`;
 
-  const href = topicSlug ? `/topics/${topicSlug}/discuss` : "/notifications";
+  const href =
+    n.type === "session_reminder" ? "/live" : topicSlug ? `/topics/${topicSlug}/discuss` : "/notifications";
 
   return (
     <Link

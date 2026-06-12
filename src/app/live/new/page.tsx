@@ -20,6 +20,7 @@ function NewSessionForm() {
   const [customLabel, setCustomLabel] = useState("");
   const [formError, setFormError] = useState("");
   const [raffleMode, setRaffleMode] = useState(false);
+  const [startsAt, setStartsAt] = useState(""); // datetime-local; empty = start now
 
   const { data: topic, isLoading, error } = trpc.topics.bySlug.useQuery(
     { slug: topicSlug ?? "" },
@@ -241,6 +242,24 @@ function NewSessionForm() {
         </>
       )}
 
+      <div className="form-group">
+        <label className="form-label" htmlFor="live-starts-at">
+          Schedule for later <span style={{ fontWeight: 400, color: "var(--text-muted)", textTransform: "none" }}>— optional; leave blank to run now</span>
+        </label>
+        <input
+          id="live-starts-at"
+          className="form-input"
+          type="datetime-local"
+          value={startsAt}
+          onChange={(e) => setStartsAt(e.target.value)}
+        />
+        {startsAt && (
+          <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+            Creates a published session people can RSVP to via a shareable link.
+          </span>
+        )}
+      </div>
+
       {formError && <p className="auth-error" style={{ marginBottom: "1rem" }}>{formError}</p>}
 
       <button
@@ -253,10 +272,12 @@ function NewSessionForm() {
             question: raffleMode ? undefined : question.trim() || undefined,
             options: raffleMode ? [] : options,
             raffleMode: raffleMode || undefined,
+            startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
+            publish: startsAt ? true : undefined,
           })
         }
       >
-        {createSession.isPending ? "Creating…" : raffleMode ? "Create raffle" : "Create session"}
+        {createSession.isPending ? "Creating…" : startsAt ? "Schedule session" : raffleMode ? "Create raffle" : "Create session"}
       </button>
       {!raffleMode && options.length < 2 && (
         <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginLeft: "0.75rem" }}>

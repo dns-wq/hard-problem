@@ -923,3 +923,17 @@ body {
 }
 .live-icon-btn:hover { color: var(--accent); }
 .live-icon-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Reaction bursts (Sprint 3) — float up and fade; the parent prunes them */
+.reaction-burst {
+  animation: reaction-float 2s ease-out forwards;
+  will-change: transform, opacity;
+}
+@keyframes reaction-float {
+  0%   { transform: translateY(0) scale(0.7); opacity: 0; }
+  15%  { transform: translateY(-10%) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-70vh) scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaction-burst { animation-duration: 0.8s; }
+}

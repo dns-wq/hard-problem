@@ -15,6 +15,7 @@ export default function SettingsPage() {
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
+  const [transcriptPublic, setTranscriptPublic] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,6 +23,7 @@ export default function SettingsPage() {
     if (profile) {
       setDisplayName(profile.display_name ?? "");
       setBio(profile.bio ?? "");
+      setTranscriptPublic(!!profile.live_transcript_public);
     }
   }, [profile]);
 
@@ -37,6 +39,7 @@ export default function SettingsPage() {
     update.mutate({
       display_name: displayName.trim() || undefined,
       bio: bio.trim() || null,
+      live_transcript_public: transcriptPublic,
     });
   }
 
@@ -69,6 +72,23 @@ export default function SettingsPage() {
               style={{ minHeight: 80 }}
             />
             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{bio.length}/500</span>
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={transcriptPublic}
+                onChange={(e) => setTranscriptPublic(e.target.checked)}
+                style={{ marginTop: "0.2rem" }}
+              />
+              <span>
+                <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>Publish my continuing-education transcript</span>
+                <span style={{ display: "block", fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
+                  Shows aggregate counts (sessions attended, votes cast, times called on, quizzes passed) and earned stamps on your public profile. Never reveals how or where you voted.
+                </span>
+              </span>
+            </label>
           </div>
 
           {error && <p style={{ color: "#c44", fontSize: "0.85rem", marginBottom: "0.75rem" }}>{error}</p>}

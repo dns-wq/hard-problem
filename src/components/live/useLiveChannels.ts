@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import type { LiveSession } from "@/types/database";
+import type { LiveSession, ReactionKind } from "@/types/database";
 
 // Realtime here is a nudge, not state transport: every event handler should
 // refetch via tRPC (the DB is the only source of truth), and screens keep a
@@ -183,4 +184,100 @@ export function useSpotlightDrawsChannel(
       supabase.removeChannel(channel);
     };
   }, [sessionId, enabled, retryKey]);
+}
+
+// Host screen only: quiz answers (high volume). Phones NEVER subscribe here —
+// they read the denormalized answer_count off the round via the pointer nudge.
+// Clone of useHostSessionChannel, throttled to ≤1 refetch/sec.
+export function useQuizAnswersChannel(
+  sessionId: string | null | undefined,
+  enabled: boolean,
+  onActivity: () => void,
+) {
+  const handlerRef = useRef(onActivity);
+  handlerRef.current = onActivity;
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    if (!sessionId || !enabled) return;
+    const supabase = createClient();
+    let throttleTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const bump = () => {
+      if (throttleTimer) return;
+      throttleTimer = setTimeout(() => {
+        throttleTimer = null;
+        handlerRef.current();
+      }, 1000);
+    };
+
+    const channel = supabase
+      .channel(`live-quiz-${sessionId}-${crypto.randomUUID()}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "live_quiz_answers", filter: `session_id=eq.${sessionId}` },
+        bump,
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "live_quiz_answers", filter: `session_id=eq.${sessionId}` },
+        bump, // grading on reveal
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          if (retryTimer) clearTimeout(retryTimer);
+          retryTimer = setTimeout(() => setRetryKey((k) => k + 1), 3000);
+        } else if (status === "CLOSED" && process.env.NODE_ENV !== "production") {
+          console.debug("[live] quiz channel closed", sessionId);
+        }
+      });
+
+    return () => {
+      if (throttleTimer) clearTimeout(throttleTimer);
+      if (retryTimer) clearTimeout(retryTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId, enabled, retryKey]);
+}
+
+// Ephemeral reaction bursts via Supabase BROADCAST (no table, no postgres_changes).
+// The one channel phones share — justified because it's tiny throttled presets,
+// never persisted. Returns a throttled sender; every reaction (incl. your own,
+// self:true) flows back through onReaction so the burst layer has one path.
+export function useReactionsChannel(
+  sessionId: string | null | undefined,
+  enabled: boolean,
+  onReaction: (kind: ReactionKind) => void,
+) {
+  const handlerRef = useRef(onReaction);
+  handlerRef.current = onReaction;
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const lastSentRef = useRef(0);
+
+  useEffect(() => {
+    if (!sessionId || !enabled) return;
+    const supabase = createClient();
+    const channel = supabase.channel(`live-reactions-${sessionId}`, {
+      config: { broadcast: { self: true } },
+    });
+    channel
+      .on("broadcast", { event: "reaction" }, (msg) => {
+        const kind = (msg.payload as { kind?: ReactionKind } | undefined)?.kind;
+        if (kind) handlerRef.current(kind);
+      })
+      .subscribe();
+    channelRef.current = channel;
+    return () => {
+      channelRef.current = null;
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId, enabled]);
+
+  return useCallback((kind: ReactionKind) => {
+    const now = Date.now();
+    if (now - lastSentRef.current < 500) return; // client throttle ≤1/500ms
+    lastSentRef.current = now;
+    channelRef.current?.send({ type: "broadcast", event: "reaction", payload: { kind } });
+  }, []);
 }

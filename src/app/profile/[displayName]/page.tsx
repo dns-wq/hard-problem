@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import LiveTranscript from "@/components/profile/LiveTranscript";
 
 export default function PublicProfilePage() {
   const params = useParams<{ displayName: string }>();
@@ -25,7 +26,7 @@ export default function PublicProfilePage() {
     );
   }
 
-  const { user, contributions } = data;
+  const { user, contributions, transcript } = data;
 
   return (
     <div className="page-narrow">
@@ -42,6 +43,17 @@ export default function PublicProfilePage() {
           Member since {new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
         </p>
       </div>
+
+      {/* Public transcript — rendered only when the user has published it
+          (transcript is null otherwise; no placeholder reveals the opt-out) */}
+      {transcript && (
+        <section style={{ marginBottom: "2rem" }}>
+          <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+            Continuing-education transcript
+          </h2>
+          <LiveTranscript counts={transcript.counts} stamps={transcript.stamps} />
+        </section>
+      )}
 
       {contributions.length > 0 && (
         <section>
