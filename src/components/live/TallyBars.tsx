@@ -62,7 +62,7 @@ export default function TallyBars({ options, total, highlightOptionId, large }: 
                   top: 0,
                   bottom: 0,
                   width: `${barWidth}%`,
-                  background: isMine ? "var(--accent)" : "rgba(59,110,165,0.55)",
+                  background: isMine ? "var(--accent)" : "var(--accent-soft)",
                   borderRadius: barHeight / 2,
                   transition: "width 0.4s ease",
                 }}
