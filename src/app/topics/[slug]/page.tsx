@@ -102,6 +102,17 @@ export default function TopicPage() {
             {topic.discussion_prompt}
           </p>
         </div>
+
+        {/* Live session entry point — put this question to a room in real time */}
+        <div style={{ marginTop: "0.75rem" }}>
+          <Link
+            href={`/live/new?topic=${topic.slug}`}
+            className="btn"
+            style={{ textDecoration: "none", display: "inline-block", fontSize: "0.8rem" }}
+          >
+            Host live session
+          </Link>
+        </div>
       </div>
 
       {/* Framing note */}

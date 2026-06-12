@@ -1,18 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { safeRedirect } from "@/lib/redirect";
 
-export default function SignupPage() {
+function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const router = useRouter();
+  // Deep-link destination (e.g. /live/play/CODE from a scanned QR) — sanitized
+  const redirect = safeRedirect(useSearchParams().get("redirect"));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,7 +27,7 @@ export default function SignupPage() {
       password,
       options: {
         data: { display_name: displayName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
       },
     });
 
@@ -42,7 +44,7 @@ export default function SignupPage() {
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
       },
     });
   }
@@ -111,10 +113,20 @@ export default function SignupPage() {
 
       <p className="auth-link-text">
         Already have an account?{" "}
-        <Link href="/auth/login" className="auth-link">
+        <Link href={`/auth/login?redirect=${encodeURIComponent(redirect)}`} className="auth-link">
           Sign in
         </Link>
       </p>
     </div>
+  );
+}
+
+// useSearchParams requires a Suspense boundary on statically prerendered pages
+// (Next 16 fails the production build without it).
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="auth-container" />}>
+      <SignupForm />
+    </Suspense>
   );
 }

@@ -863,3 +863,63 @@ body {
   .header-nav { display: none; }
   .page, .page-narrow { padding: 1.5rem 1rem; }
 }
+
+/* ===== Live Sessions ===== */
+.live-code {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-indent: 0.35em; /* re-center: letter-spacing adds trailing space */
+}
+
+.live-code-input {
+  text-align: center;
+  letter-spacing: 0.3em;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.live-option-btn {
+  display: block;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.live-option-btn:hover { border-color: var(--accent); }
+.live-option-btn.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  font-weight: 600;
+}
+
+.live-chip {
+  padding: 0.25rem 0.6rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.live-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.live-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.3rem;
+}
+.live-icon-btn:hover { color: var(--accent); }
+.live-icon-btn:disabled { opacity: 0.3; cursor: default; }

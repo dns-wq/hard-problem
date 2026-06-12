@@ -9,6 +9,7 @@ import { notificationsRouter } from "@/lib/trpc/routers/notifications";
 import { profileRouter } from "@/lib/trpc/routers/profile";
 import { aiRouter } from "@/lib/trpc/routers/ai";
 import { adminRouter } from "@/lib/trpc/routers/admin";
+import { liveRouter } from "@/lib/trpc/routers/live";
 
 export const appRouter = createTRPCRouter({
   topics: topicsRouter,
@@ -21,6 +22,7 @@ export const appRouter = createTRPCRouter({
   profile: profileRouter,
   ai: aiRouter,
   admin: adminRouter,
+  live: liveRouter,
 });
 
 export type AppRouter = typeof appRouter;

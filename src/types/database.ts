@@ -1,5 +1,5 @@
 // Hard Problem — Database Types
-// Mirrors the schema in supabase/migrations/001_initial_schema.sql
+// Mirrors the schema in supabase/migrations/ (001 onward)
 
 export type UserRole = "user" | "editor" | "admin";
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "none";
@@ -193,4 +193,132 @@ export interface RAGChunk {
 export interface StanceTagCount {
   tag: string;
   count: number;
+}
+
+// ===== Live Sessions (005_live_sessions.sql) =====
+
+export type LiveSessionStatus = "lobby" | "voting" | "revealed" | "ended";
+
+export interface LiveSession {
+  id: string;
+  code: string;
+  topic_id: string;
+  host_id: string;
+  status: LiveSessionStatus;
+  question: string;
+  created_at: string;
+  updated_at: string;
+  ended_at: string | null;
+  // 006_spotlight_draw.sql
+  raffle_mode: boolean;
+  current_spotlight_draw_id: string | null;
+  spotlight_cycle: number;
+}
+
+export interface LiveSessionOption {
+  id: string;
+  session_id: string;
+  label: string;
+  source_stance_tag: string | null;
+  display_order: number;
+}
+
+export interface LiveParticipant {
+  session_id: string;
+  user_id: string;
+  display_name: string;
+  joined_at: string;
+  callable: boolean; // 006: opt-out of being drawn (default true)
+}
+
+export interface LiveResponse {
+  session_id: string;
+  user_id: string;
+  option_id: string;
+  note: string | null;
+  round_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Shape returned by the get_live_session_by_code RPC (pre-join preview)
+export interface LiveSessionPreview {
+  id: string;
+  status: LiveSessionStatus;
+  question: string;
+  topic_id: string;
+  topic_title: string;
+  topic_slug: string;
+  is_host: boolean;
+  is_participant: boolean;
+}
+
+// One row per option from the get_live_tally RPC
+export interface LiveTallyRow {
+  option_id: string;
+  label: string;
+  display_order: number;
+  vote_count: number;
+  participant_count: number;
+}
+
+// ===== Live Spotlight Draws (006_spotlight_draw.sql) =====
+
+export type SpotlightMode =
+  | "uniform"
+  | "no_repeat"
+  | "minority_weighted"
+  | "minority_steelman";
+
+export type SpotlightOutcome = "pending" | "shared" | "passed" | "cleared";
+
+export interface LiveSpotlightDraw {
+  id: string;
+  session_id: string;
+  cycle: number;
+  sequence: number;
+  mode: SpotlightMode;
+  minority_option_id: string | null;
+  drawn_user_id: string;
+  display_name: string;
+  pool_size: number;
+  outcome: SpotlightOutcome;
+  note_shared: boolean;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+// Shape returned by the get_current_spotlight RPC — the read every screen
+// refetches on the nudge. is_you is evaluated server-side; drawn_note is only
+// populated for the drawn user, or for everyone once note_shared is true.
+export interface CurrentSpotlight {
+  draw_id: string;
+  // NULL to non-drawn viewers when outcome is passed/cleared (silent-pass consent)
+  drawn_display_name: string | null;
+  mode: SpotlightMode;
+  outcome: SpotlightOutcome;
+  note_shared: boolean;
+  is_you: boolean;
+  drawn_note: string | null;
+  pool_size: number;
+}
+
+// Shape returned by the draw_spotlight RPC (the host's draw result)
+export interface DrawResult {
+  draw_id: string;
+  drawn_display_name: string;
+  mode: SpotlightMode;
+  sequence: number;
+  pool_size: number;
+}
+
+// One row per participant from the host-only get_spotlight_history RPC
+// (the no-repeat "already-called" roster).
+export interface SpotlightHistoryRow {
+  user_id: string;
+  display_name: string;
+  draw_count: number;
+  last_outcome: SpotlightOutcome | null;
+  last_sequence: number | null;
+  participant_count: number;
 }

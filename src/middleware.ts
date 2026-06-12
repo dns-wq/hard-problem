@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
 
     if (!user) {
       const loginUrl = new URL("/auth/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
+      loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);
       return NextResponse.redirect(loginUrl);
     }
 
@@ -43,7 +43,15 @@ export async function middleware(request: NextRequest) {
 
   // Protect own /profile and /settings and /notifications — require authentication
   // /profile/[displayName] sub-paths are public (other users' profiles)
-  if (pathname === "/profile" || pathname.startsWith("/settings") || pathname.startsWith("/notifications")) {
+  // /live/new and /live/host are auth-gated; /live and /live/play/* stay
+  // public (in-page gates) so the join explainer renders before login.
+  if (
+    pathname === "/profile" ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/notifications") ||
+    pathname.startsWith("/live/new") ||
+    pathname.startsWith("/live/host")
+  ) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -61,7 +69,8 @@ export async function middleware(request: NextRequest) {
 
     if (!user) {
       const loginUrl = new URL("/auth/login", request.url);
-      loginUrl.searchParams.set("redirect", pathname);
+      // Preserve the query string: /live/new?topic={slug} must survive login
+      loginUrl.searchParams.set("redirect", pathname + request.nextUrl.search);
       return NextResponse.redirect(loginUrl);
     }
   }

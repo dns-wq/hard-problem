@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { safeRedirect } from "@/lib/redirect";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  // Deep-link destination (e.g. /live/play/CODE from a scanned QR) — sanitized
+  const redirect = safeRedirect(useSearchParams().get("redirect"));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,7 +27,7 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push("/topics");
+      router.push(redirect);
     }
   }
 
@@ -33,7 +36,7 @@ export default function LoginPage() {
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
       },
     });
   }
@@ -80,10 +83,20 @@ export default function LoginPage() {
 
       <p className="auth-link-text">
         No account?{" "}
-        <Link href="/auth/signup" className="auth-link">
+        <Link href={`/auth/signup?redirect=${encodeURIComponent(redirect)}`} className="auth-link">
           Sign up
         </Link>
       </p>
     </div>
+  );
+}
+
+// useSearchParams requires a Suspense boundary on statically prerendered pages
+// (Next 16 fails the production build without it).
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="auth-container" />}>
+      <LoginForm />
+    </Suspense>
   );
 }
