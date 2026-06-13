@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 
 export default function ConceptsPage() {
+  const t = useT();
   const { data: concepts, isLoading } = trpc.concepts.list.useQuery();
   const [search, setSearch] = useState("");
 
@@ -15,9 +17,9 @@ export default function ConceptsPage() {
   return (
     <div className="page">
       <div style={{ marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.4rem" }}>Concepts</h1>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.4rem" }}>{t("concepts.title")}</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-          Key terms from tech ethics, philosophy, and AI safety.
+          {t("concepts.subtitle")}
         </p>
       </div>
 
@@ -25,7 +27,7 @@ export default function ConceptsPage() {
         type="search"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search concepts…"
+        placeholder={t("concepts.search.placeholder")}
         style={{
           fontSize: "0.875rem",
           padding: "0.5rem 0.75rem",
@@ -42,10 +44,10 @@ export default function ConceptsPage() {
       />
 
       {isLoading ? (
-        <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p>
       ) : !filtered.length ? (
         <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          {search ? "No concepts match your search." : "No concepts yet."}
+          {search ? t("concepts.empty.noMatch") : t("concepts.empty.none")}
         </p>
       ) : (
         <div style={{ columns: "2 300px", gap: "0.75rem" }}>
@@ -71,7 +73,7 @@ export default function ConceptsPage() {
                 </p>
                 {concept.related_terms && concept.related_terms.length > 0 && (
                   <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.4rem" }}>
-                    Related: {concept.related_terms.slice(0, 3).join(", ")}
+                    {t("concepts.card.related", { terms: concept.related_terms.slice(0, 3).join(", ") })}
                   </p>
                 )}
               </Link>

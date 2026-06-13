@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 import TopicCard from "@/components/topic/TopicCard";
 import FilterBar from "@/components/topic/FilterBar";
 
 export default function TopicsPage() {
+  const t = useT();
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState("");
 
@@ -20,9 +22,9 @@ export default function TopicsPage() {
   return (
     <div className="page">
       <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.4rem" }}>Topics</h1>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.4rem" }}>{t("topics.title")}</h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-          Each topic is anchored in a key paper and grounded in a real-world case.
+          {t("topics.subtitle")}
         </p>
       </div>
 
@@ -42,7 +44,7 @@ export default function TopicsPage() {
       ) : !filtered.length ? (
         <div style={{ textAlign: "center", padding: "3rem 0" }}>
           <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-            {search || difficulty ? "No topics match your filters." : "No topics published yet."}
+            {search || difficulty ? t("topics.empty.noMatch") : t("topics.empty.none")}
           </p>
           {(search || difficulty) && (
             <button
@@ -51,7 +53,7 @@ export default function TopicsPage() {
               style={{ marginTop: "0.75rem" }}
               onClick={() => { setSearch(""); setDifficulty(""); }}
             >
-              Clear filters
+              {t("topics.cta.clearFilters")}
             </button>
           )}
         </div>

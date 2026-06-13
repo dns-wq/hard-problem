@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/i18n/LocaleProvider";
 import PaperViewer from "./PaperViewer";
-
-const ROLE_LABEL: Record<string, string> = {
-  focal: "Focal",
-  counter: "Counter",
-  supplementary: "Supplementary",
-};
 
 const ROLE_COLOR: Record<string, string> = {
   focal: "var(--accent)",
@@ -32,6 +27,7 @@ interface PapersSectionProps {
 }
 
 export default function PapersSection({ papers }: PapersSectionProps) {
+  const t = useT();
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [expandedAbstract, setExpandedAbstract] = useState<Set<string>>(new Set());
 
@@ -48,7 +44,7 @@ export default function PapersSection({ papers }: PapersSectionProps) {
   return (
     <div>
       <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "1rem" }}>
-        Papers
+        {t("topic.papers.heading")}
       </h2>
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         {papers.map((paper) => (
@@ -65,10 +61,10 @@ export default function PapersSection({ papers }: PapersSectionProps) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.3rem", flexWrap: "wrap" }}>
                     <span style={{ fontSize: "0.68rem", fontWeight: 700, color: ROLE_COLOR[paper.role] ?? "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      {ROLE_LABEL[paper.role] ?? paper.role}
+                      {t(`topic.papers.role.${paper.role}`)}
                     </span>
                     {paper.is_open_access && (
-                      <span className="tag tag-accent">Open access</span>
+                      <span className="tag tag-accent">{t("topic.papers.openAccess")}</span>
                     )}
                   </div>
                   <h3 style={{ fontSize: "0.95rem", fontWeight: 600, margin: 0, lineHeight: 1.4 }}>
@@ -77,7 +73,7 @@ export default function PapersSection({ papers }: PapersSectionProps) {
                     </a>
                   </h3>
                   <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", margin: "0.2rem 0 0" }}>
-                    {paper.authors}{paper.year ? `, ${paper.year}` : ""}
+                    {paper.year ? t("topic.papers.authorsYear", { authors: paper.authors, year: paper.year }) : paper.authors}
                   </p>
                 </div>
               </div>
@@ -95,7 +91,7 @@ export default function PapersSection({ papers }: PapersSectionProps) {
                     onClick={() => toggleAbstract(paper.id)}
                     style={{ fontSize: "0.75rem", color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: "0.3rem 0 0", display: "block" }}
                   >
-                    {expandedAbstract.has(paper.id) ? "Hide abstract" : "Show abstract"}
+                    {expandedAbstract.has(paper.id) ? t("topic.papers.hideAbstract") : t("topic.papers.showAbstract")}
                   </button>
                 </div>
               )}
@@ -109,7 +105,7 @@ export default function PapersSection({ papers }: PapersSectionProps) {
                     style={{ fontSize: "0.775rem", padding: "0.25rem 0.65rem" }}
                     onClick={() => setViewingId(viewingId === paper.id ? null : paper.id)}
                   >
-                    {viewingId === paper.id ? "Close viewer" : "View PDF"}
+                    {viewingId === paper.id ? t("topic.papers.closeViewer") : t("topic.papers.viewPdf")}
                   </button>
                 ) : (
                   <a
@@ -119,7 +115,7 @@ export default function PapersSection({ papers }: PapersSectionProps) {
                     className="btn"
                     style={{ fontSize: "0.775rem", padding: "0.25rem 0.65rem", textDecoration: "none" }}
                   >
-                    Read paper →
+                    {t("topic.papers.readPaper")}
                   </a>
                 )}
                 {paper.pdf_url && !paper.is_open_access && (
@@ -129,7 +125,7 @@ export default function PapersSection({ papers }: PapersSectionProps) {
                     rel="noopener noreferrer"
                     style={{ fontSize: "0.75rem", color: "var(--accent)", alignSelf: "center", textDecoration: "none" }}
                   >
-                    PDF →
+                    {t("topic.papers.pdfLink")}
                   </a>
                 )}
               </div>

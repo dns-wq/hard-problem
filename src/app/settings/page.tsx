@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 
 export default function SettingsPage() {
+  const t = useT();
   const router = useRouter();
   const { data: profile, isLoading } = trpc.profile.me.useQuery();
   const update = trpc.profile.update.useMutation({
@@ -27,7 +29,7 @@ export default function SettingsPage() {
     }
   }, [profile]);
 
-  if (isLoading) return <div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>Loading…</p></div>;
+  if (isLoading) return <div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p></div>;
   if (!profile) {
     router.push("/auth/login");
     return null;
@@ -45,33 +47,33 @@ export default function SettingsPage() {
 
   return (
     <div className="page-narrow">
-      <h1 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: "2rem" }}>Settings</h1>
+      <h1 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: "2rem" }}>{t("settings.title")}</h1>
 
       <section style={{ marginBottom: "2rem" }}>
         <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>
-          Profile
+          {t("settings.section.profile")}
         </h2>
         <form onSubmit={handleSubmit} style={{ maxWidth: 480 }}>
           <div className="form-group">
-            <label className="form-label">Display name</label>
+            <label className="form-label">{t("settings.label.displayName")}</label>
             <input
               className="form-input"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your name"
+              placeholder={t("settings.placeholder.displayName")}
               maxLength={80}
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Bio <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none" }}>— optional, max 500 chars</span></label>
+            <label className="form-label">{t("settings.label.bio")} <span style={{ color: "var(--text-muted)", fontWeight: 400, textTransform: "none" }}>{t("settings.hint.bio")}</span></label>
             <textarea
               className="form-textarea"
               value={bio}
               onChange={(e) => setBio(e.target.value.slice(0, 500))}
-              placeholder="Tell us about your background or interest in tech ethics…"
+              placeholder={t("settings.placeholder.bio")}
               style={{ minHeight: 80 }}
             />
-            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{bio.length}/500</span>
+            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{t("settings.hint.bioCount", { count: bio.length })}</span>
           </div>
 
           <div className="form-group">
@@ -83,9 +85,9 @@ export default function SettingsPage() {
                 style={{ marginTop: "0.2rem" }}
               />
               <span>
-                <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>Publish my continuing-education transcript</span>
+                <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>{t("settings.label.publishTranscript")}</span>
                 <span style={{ display: "block", fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.15rem" }}>
-                  Shows aggregate counts (sessions attended, votes cast, times called on, quizzes passed) and earned stamps on your public profile. Never reveals how or where you voted.
+                  {t("settings.desc.publishTranscript")}
                 </span>
               </span>
             </label>
@@ -95,30 +97,30 @@ export default function SettingsPage() {
 
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
             <button type="submit" className="btn btn-primary" disabled={update.isPending}>
-              {update.isPending ? "Saving…" : "Save changes"}
+              {update.isPending ? t("settings.cta.saveLoading") : t("settings.cta.save")}
             </button>
-            {saved && <span style={{ fontSize: "0.82rem", color: "var(--success)" }}>Saved.</span>}
+            {saved && <span style={{ fontSize: "0.82rem", color: "var(--success)" }}>{t("settings.status.saved")}</span>}
           </div>
         </form>
       </section>
 
       <section style={{ marginBottom: "2rem" }}>
         <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-          Account
+          {t("settings.section.account")}
         </h2>
         <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-light)", borderRadius: 8, padding: "1rem 1.25rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <p style={{ fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.1rem" }}>Subscription</p>
+              <p style={{ fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.1rem" }}>{t("settings.account.subscription")}</p>
               <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
-                {profile.subscription_tier === "pro" ? "Pro — AI Q&A enabled" : "Free plan"}
+                {profile.subscription_tier === "pro" ? t("settings.account.tier.pro") : t("settings.account.tier.free")}
               </p>
             </div>
             {profile.subscription_tier === "pro" ? (
               <ManageBillingButton />
             ) : (
               <Link href="/upgrade" className="btn btn-primary" style={{ textDecoration: "none", fontSize: "0.82rem" }}>
-                Upgrade to Pro
+                {t("settings.cta.upgradeToPro")}
               </Link>
             )}
           </div>
@@ -129,6 +131,7 @@ export default function SettingsPage() {
 }
 
 function ManageBillingButton() {
+  const t = useT();
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
@@ -146,7 +149,7 @@ function ManageBillingButton() {
       onClick={handleClick}
       disabled={loading}
     >
-      {loading ? "Opening…" : "Manage subscription"}
+      {loading ? t("settings.cta.manageBillingLoading") : t("settings.cta.manageBilling")}
     </button>
   );
 }

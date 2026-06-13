@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import Composer from "@/components/discussion/Composer";
 import ContributionList from "@/components/discussion/ContributionList";
@@ -13,6 +14,7 @@ import AIPanel from "@/components/ai/AIPanel";
 type SortBy = "recent" | "stance";
 
 export default function DiscussPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const [currentUserId, setCurrentUserId] = useState<string | null | undefined>(undefined);
   const [sortBy, setSortBy] = useState<SortBy>("recent");
@@ -69,7 +71,7 @@ export default function DiscussPage() {
       <div className="page-narrow" style={{ textAlign: "center", paddingTop: "4rem" }}>
         <p style={{ color: "var(--text-muted)" }}>Topic not found.</p>
         <Link href="/topics" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          ← All topics
+          {t("nav.allTopics")}
         </Link>
       </div>
     );
@@ -83,11 +85,11 @@ export default function DiscussPage() {
       {/* Breadcrumb + AI toggle */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", fontSize: "0.8rem", color: "var(--text-muted)" }}>
-          <Link href="/topics" style={{ color: "var(--text-muted)", textDecoration: "none" }}>Topics</Link>
+          <Link href="/topics" style={{ color: "var(--text-muted)", textDecoration: "none" }}>{t("discuss.breadcrumb.topics")}</Link>
           <span>/</span>
           <Link href={`/topics/${topic.slug}`} style={{ color: "var(--text-muted)", textDecoration: "none" }}>{topic.title}</Link>
           <span>/</span>
-          <span>Discussion</span>
+          <span>{t("discuss.breadcrumb.discussion")}</span>
         </div>
         <button
           type="button"
@@ -95,7 +97,7 @@ export default function DiscussPage() {
           style={{ fontSize: "0.8rem" }}
           onClick={() => setAiOpen((v) => !v)}
         >
-          {aiOpen ? "Close AI Q&A" : "Ask AI"}
+          {aiOpen ? t("discuss.cta.closeAi") : t("discuss.cta.askAi")}
         </button>
       </div>
 
@@ -135,10 +137,15 @@ export default function DiscussPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
             <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>
               {stanceFilter
-                ? `Showing: "${stanceFilter}"`
+                ? t("discuss.filter.showing", { stance: stanceFilter })
                 : totalContribCount > 0
-                ? `${totalContribCount} contribution${totalContribCount !== 1 ? "s" : ""}`
-                : "No contributions yet"}
+                ? t(
+                    totalContribCount === 1
+                      ? "discuss.count.contributions.one"
+                      : "discuss.count.contributions.other",
+                    { count: totalContribCount },
+                  )
+                : t("discuss.count.empty")}
             </span>
             <div style={{ display: "flex", gap: "0.25rem" }}>
               {(["recent", "stance"] as SortBy[]).map((s) => (
@@ -157,7 +164,7 @@ export default function DiscussPage() {
                     borderColor: sortBy === s ? "var(--accent)" : "var(--border)",
                   }}
                 >
-                  {s === "recent" ? "Recent" : "By stance"}
+                  {s === "recent" ? t("discuss.sort.recent") : t("discuss.sort.byStance")}
                 </button>
               ))}
             </div>

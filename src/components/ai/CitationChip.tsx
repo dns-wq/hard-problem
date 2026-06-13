@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useT } from "@/i18n/LocaleProvider";
 
 interface CitationChipProps {
   index: number;
@@ -8,6 +9,7 @@ interface CitationChipProps {
 }
 
 export default function CitationChip({ index, chunkText }: CitationChipProps) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
 
@@ -25,7 +27,7 @@ export default function CitationChip({ index, chunkText }: CitationChipProps) {
         type="button"
         className="citation-chip"
         onClick={() => setOpen((v) => !v)}
-        aria-label={`Citation ${index}`}
+        aria-label={t("ai.citation.ariaLabel", { index })}
       >
         {index}
       </button>
@@ -49,7 +51,7 @@ export default function CitationChip({ index, chunkText }: CitationChipProps) {
           pointerEvents: "auto",
         }}>
           <span style={{ fontSize: "0.68rem", fontWeight: 600, color: "var(--accent)", display: "block", marginBottom: "0.3rem" }}>
-            Source [{index}]
+            {t("ai.citation.sourceLabel", { index })}
           </span>
           {chunkText.length > 320 ? chunkText.slice(0, 320) + "…" : chunkText}
         </span>

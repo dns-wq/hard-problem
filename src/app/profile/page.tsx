@@ -4,8 +4,10 @@ import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
 import ProgressIndicator from "@/components/topic/ProgressIndicator";
 import LiveTranscript from "@/components/profile/LiveTranscript";
+import { useT } from "@/i18n/LocaleProvider";
 
 export default function ProfilePage() {
+  const t = useT();
   const { data: profile, isLoading } = trpc.profile.me.useQuery();
   const { data: stats } = trpc.profile.stats.useQuery();
   const { data: transcript } = trpc.profile.liveTranscript.useQuery();
@@ -14,7 +16,7 @@ export default function ProfilePage() {
   if (isLoading) {
     return (
       <div className="page-narrow">
-        <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p>
       </div>
     );
   }
@@ -22,9 +24,9 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="page-narrow" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <p style={{ color: "var(--text-muted)" }}>Not signed in.</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("profile.notSignedIn")}</p>
         <Link href="/auth/login" className="btn btn-primary" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          Sign in
+          {t("nav.signIn")}
         </Link>
       </div>
     );
@@ -45,13 +47,13 @@ export default function ProfilePage() {
           )}
           <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.3rem" }}>
             {profile.subscription_tier === "pro"
-              ? "Pro member"
-              : "Free plan"}{" "}
-            · Member since {new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+              ? t("profile.tier.pro")
+              : t("profile.tier.free")}{" "}
+            · {t("profile.memberSince", { date: new Date(profile.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) })}
           </p>
         </div>
         <Link href="/settings" className="btn" style={{ textDecoration: "none", fontSize: "0.82rem" }}>
-          Edit profile
+          {t("profile.cta.editProfile")}
         </Link>
       </div>
 
@@ -59,9 +61,9 @@ export default function ProfilePage() {
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "2rem" }}>
           {[
-            { label: "Topics engaged", value: stats.topicsEngaged },
-            { label: "Contributions", value: stats.totalContributions },
-            { label: "Times built on", value: stats.totalBuiltUpon },
+            { label: t("profile.stat.topicsEngaged"), value: stats.topicsEngaged },
+            { label: t("profile.stat.contributions"), value: stats.totalContributions },
+            { label: t("profile.stat.timesBuiltOn"), value: stats.totalBuiltUpon },
           ].map(({ label, value }) => (
             <div key={label} style={{ background: "var(--bg-surface)", border: "1px solid var(--border-light)", borderRadius: 8, padding: "0.875rem 1rem" }}>
               <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--accent)" }}>{value}</div>
@@ -75,7 +77,7 @@ export default function ProfilePage() {
       {transcript && (
         <section style={{ marginBottom: "2rem" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-            Continuing-education transcript
+            {t("profile.section.transcript")}
           </h2>
           <LiveTranscript counts={transcript.counts} stamps={transcript.stamps} isPrivate={!transcript.isPublic} />
         </section>
@@ -85,13 +87,13 @@ export default function ProfilePage() {
       {stats?.progress && stats.progress.length > 0 && (
         <section style={{ marginBottom: "2rem" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-            Progress
+            {t("profile.section.progress")}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {stats.progress.map((p) => (
               <div key={p.topic_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--bg-surface)", border: "1px solid var(--border-light)", borderRadius: 6, padding: "0.6rem 0.875rem" }}>
                 <Link href={`/topics`} style={{ fontSize: "0.85rem", color: "var(--text-primary)", textDecoration: "none" }}>
-                  Topic
+                  {t("profile.progress.topic")}
                 </Link>
                 <ProgressIndicator quizPassed={p.quiz_passed ?? false} hasContributed={p.contributed ?? false} />
               </div>
@@ -104,7 +106,7 @@ export default function ProfilePage() {
       {myContributions && myContributions.length > 0 && (
         <section>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-            Recent contributions
+            {t("profile.section.recentContributions")}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
             {myContributions.map((c) => {

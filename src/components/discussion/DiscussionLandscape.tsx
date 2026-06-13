@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/i18n/LocaleProvider";
+
 interface StanceCount {
   tag: string;
   count: number;
@@ -13,6 +15,7 @@ interface DiscussionLandscapeProps {
 }
 
 export default function DiscussionLandscape({ stanceTags, activeFilter, onFilterChange, totalCount }: DiscussionLandscapeProps) {
+  const t = useT();
   if (!stanceTags.length) return null;
 
   const max = stanceTags[0].count;
@@ -27,7 +30,7 @@ export default function DiscussionLandscape({ stanceTags, activeFilter, onFilter
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.75rem" }}>
         <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
-          Stance landscape
+          {t("discuss.landscape.title")}
         </span>
         {activeFilter && (
           <button
@@ -35,7 +38,7 @@ export default function DiscussionLandscape({ stanceTags, activeFilter, onFilter
             onClick={() => onFilterChange(null)}
             style={{ fontSize: "0.72rem", color: "var(--accent)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
           >
-            Clear filter ✕
+            {t("discuss.landscape.clearFilter")}
           </button>
         )}
       </div>

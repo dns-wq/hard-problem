@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/i18n/LocaleProvider";
 
 interface TopicVideo {
   youtube_id: string;
@@ -19,6 +20,7 @@ function VideoEmbed({ video, isActive, onActivate }: {
   isActive: boolean;
   onActivate: () => void;
 }) {
+  const t = useT();
   return (
     <div style={{
       border: "1px solid var(--border)",
@@ -54,7 +56,7 @@ function VideoEmbed({ video, isActive, onActivate }: {
             cursor: "pointer",
             position: "relative",
           }}
-          aria-label={`Play: ${video.title}`}
+          aria-label={t("topic.videos.playLabel", { title: video.title })}
         >
           {/* YouTube thumbnail */}
           <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, background: "#000" }}>
@@ -94,7 +96,7 @@ function VideoEmbed({ video, isActive, onActivate }: {
                 padding: "2px 6px",
                 borderRadius: 3,
               }}>
-                {video.duration_min} min
+                {t("topic.videos.durationMin", { count: video.duration_min })}
               </span>
             )}
           </div>
@@ -120,6 +122,7 @@ function VideoEmbed({ video, isActive, onActivate }: {
 }
 
 export default function VideosSection({ videos }: VideosSectionProps) {
+  const t = useT();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   if (!videos || videos.length === 0) return null;
@@ -134,7 +137,7 @@ export default function VideosSection({ videos }: VideosSectionProps) {
         color: "var(--text-muted)",
         marginBottom: "0.875rem",
       }}>
-        From the author{videos.length > 1 ? "s" : ""}
+        {t(videos.length > 1 ? "topic.videos.fromAuthor.other" : "topic.videos.fromAuthor.one")}
       </h2>
 
       <div style={{

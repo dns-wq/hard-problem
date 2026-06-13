@@ -3,8 +3,10 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 
 export default function ConceptPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
   const { data: concept, isLoading, error } = trpc.concepts.bySlug.useQuery({ slug: params.slug });
 
@@ -19,9 +21,9 @@ export default function ConceptPage() {
   if (error || !concept) {
     return (
       <div className="page-narrow" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <p style={{ color: "var(--text-muted)" }}>Concept not found.</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("concept.error.notFound")}</p>
         <Link href="/concepts" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          ← All concepts
+          {t("concept.cta.allConcepts")}
         </Link>
       </div>
     );
@@ -30,7 +32,7 @@ export default function ConceptPage() {
   return (
     <div className="page-narrow">
       <Link href="/concepts" style={{ fontSize: "0.8rem", color: "var(--text-muted)", textDecoration: "none", display: "inline-block", marginBottom: "1.5rem" }}>
-        ← Concepts
+        {t("concept.cta.backConcepts")}
       </Link>
 
       <h1 style={{ fontSize: "1.6rem", fontWeight: 800, marginBottom: "1rem" }}>{concept.term}</h1>
@@ -42,7 +44,7 @@ export default function ConceptPage() {
       {concept.examples && (
         <section style={{ marginBottom: "1.5rem" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.6rem" }}>
-            Examples
+            {t("concept.section.examples")}
           </h2>
           <p style={{ fontSize: "0.9rem", lineHeight: 1.65, color: "var(--text-secondary)" }}>{concept.examples}</p>
         </section>
@@ -51,7 +53,7 @@ export default function ConceptPage() {
       {concept.related_terms && concept.related_terms.length > 0 && (
         <section>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.6rem" }}>
-            Related terms
+            {t("concept.section.relatedTerms")}
           </h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
             {(concept.related_terms as string[]).map((term) => (

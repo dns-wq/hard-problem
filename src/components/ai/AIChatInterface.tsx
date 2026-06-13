@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 import CitationChip from "./CitationChip";
 
 interface RAGChunk {
@@ -49,6 +50,7 @@ interface AIChatInterfaceProps {
 }
 
 export default function AIChatInterface({ topicId }: AIChatInterfaceProps) {
+  const t = useT();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -99,7 +101,7 @@ export default function AIChatInterface({ topicId }: AIChatInterfaceProps) {
       };
       setMessages((m) => [...m, assistantMsg]);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      setError(err instanceof Error ? err.message : t("ai.chat.errorFallback"));
       setMessages((m) => m.slice(0, -1)); // remove the optimistic user message on error
     } finally {
       setIsTyping(false);
@@ -122,8 +124,8 @@ export default function AIChatInterface({ topicId }: AIChatInterfaceProps) {
         {isEmpty && (
           <div style={{ textAlign: "center", marginTop: "auto", padding: "1rem 0" }}>
             <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", lineHeight: 1.6 }}>
-              Ask a question about this topic's papers.<br />
-              Responses are grounded in the source material.
+              {t("ai.chat.emptyLine1")}<br />
+              {t("ai.chat.emptyLine2")}
             </p>
           </div>
         )}
@@ -174,7 +176,7 @@ export default function AIChatInterface({ topicId }: AIChatInterfaceProps) {
           value={input}
           onChange={(e) => setInput(e.target.value.slice(0, 2000))}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question… (Enter to send)"
+          placeholder={t("ai.chat.placeholder")}
           rows={2}
           disabled={isTyping || !conversationId}
         />
@@ -184,7 +186,7 @@ export default function AIChatInterface({ topicId }: AIChatInterfaceProps) {
           onClick={handleSend}
           disabled={!input.trim() || isTyping || !conversationId}
         >
-          Send
+          {t("ai.chat.send")}
         </button>
       </div>
 

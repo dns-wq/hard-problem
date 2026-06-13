@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/LocaleProvider";
 import type { LiveTranscriptCounts } from "@/types/database";
 import type { Stamp } from "@/lib/stamps";
 
@@ -9,19 +10,22 @@ interface LiveTranscriptProps {
   isPrivate?: boolean; // own view, not yet published
 }
 
-const STATS: { key: keyof LiveTranscriptCounts; label: string }[] = [
-  { key: "sessions_attended", label: "Sessions attended" },
-  { key: "votes_cast", label: "Votes cast" },
-  { key: "times_spotlighted", label: "Times called on" },
-  { key: "times_shared", label: "Times shared" },
-  { key: "quiz_passed_topics", label: "Quizzes passed" },
+// Stat labels and the stamp catalog (src/lib/stamps.ts) are localized at THIS render
+// site via t(): stats by labelKey, stamps by `transcript.stamp.${stamp.key}.*`.
+const STATS: { key: keyof LiveTranscriptCounts; labelKey: string }[] = [
+  { key: "sessions_attended", labelKey: "transcript.stat.sessionsAttended" },
+  { key: "votes_cast", labelKey: "transcript.stat.votesCast" },
+  { key: "times_spotlighted", labelKey: "transcript.stat.timesCalledOn" },
+  { key: "times_shared", labelKey: "transcript.stat.timesShared" },
+  { key: "quiz_passed_topics", labelKey: "transcript.stat.quizzesPassed" },
 ];
 
 // The "continuing-education transcript": aggregate counts + earned stamps.
 export default function LiveTranscript({ counts, stamps, isPrivate }: LiveTranscriptProps) {
+  const t = useT();
   const hasActivity = STATS.some((s) => counts[s.key] > 0);
   if (!hasActivity && stamps.length === 0) {
-    return <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>No live-session activity yet.</p>;
+    return <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{t("transcript.empty")}</p>;
   }
 
   return (
@@ -33,7 +37,7 @@ export default function LiveTranscript({ counts, stamps, isPrivate }: LiveTransc
             style={{ padding: "0.85rem", background: "var(--bg-surface)", border: "1px solid var(--border-light)", borderRadius: 10, textAlign: "center" }}
           >
             <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--accent)" }}>{counts[s.key]}</div>
-            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>{s.label}</div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>{t(s.labelKey)}</div>
           </div>
         ))}
       </div>
@@ -43,7 +47,7 @@ export default function LiveTranscript({ counts, stamps, isPrivate }: LiveTransc
           {stamps.map((s) => (
             <div
               key={s.key}
-              title={s.description}
+              title={t(`transcript.stamp.${s.key}.description`)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -56,7 +60,7 @@ export default function LiveTranscript({ counts, stamps, isPrivate }: LiveTransc
               }}
             >
               <span style={{ fontSize: "1.1rem" }}>{s.emoji}</span>
-              {s.label}
+              {t(`transcript.stamp.${s.key}.label`)}
             </div>
           ))}
         </div>
@@ -64,7 +68,16 @@ export default function LiveTranscript({ counts, stamps, isPrivate }: LiveTransc
 
       {isPrivate && (
         <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "0.9rem" }}>
-          Private — only you can see this. Publish it in <a href="/settings" style={{ color: "var(--accent)" }}>settings</a>.
+          {(() => {
+            const [before, after] = t("transcript.private").split("{settingsLink}");
+            return (
+              <>
+                {before}
+                <a href="/settings" style={{ color: "var(--accent)" }}>{t("transcript.private.settingsLink")}</a>
+                {after}
+              </>
+            );
+          })()}
         </p>
       )}
     </div>
