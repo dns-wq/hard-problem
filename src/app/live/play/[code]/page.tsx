@@ -24,6 +24,31 @@ function PlayInner({ code }: { code: string }) {
   const [note, setNote] = useState("");
   const [voteSubmitted, setVoteSubmitted] = useState(false);
   const [editingVote, setEditingVote] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState("");
+
+  // Guest join: an anonymous Supabase session (no account). Setting `user`
+  // re-renders → byCode runs → the auto-join effect fires, so the guest lands
+  // in the room directly. handle_new_user (010) gives them a profile row.
+  async function handleGuestJoin() {
+    const name = guestName.trim();
+    if (!name) {
+      setGuestError("Enter a name to join.");
+      return;
+    }
+    setGuestLoading(true);
+    setGuestError("");
+    const { data, error } = await createClient().auth.signInAnonymously({
+      options: { data: { display_name: name.slice(0, 40) } },
+    });
+    if (error) {
+      setGuestError(error.message);
+      setGuestLoading(false);
+      return;
+    }
+    setUser(data.user);
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -217,18 +242,31 @@ function PlayInner({ code }: { code: string }) {
     return (
       <div className="auth-container" style={{ textAlign: "center" }}>
         <h1 className="auth-title">Join the live session</h1>
-        <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.65, marginBottom: "1.5rem" }}>
-          The room is voting on a question from Hard Problem. Sign in (or create
-          an account — it takes two taps with Google) and you&apos;ll land right
-          back here.
+        <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.65, marginBottom: "1.25rem" }}>
+          Enter your name to jump in — no account needed.
         </p>
-        <Link
-          href={`/auth/login?redirect=${encodeURIComponent(`/live/play/${code}`)}`}
-          className="btn btn-primary"
-          style={{ display: "inline-block", textDecoration: "none" }}
-        >
-          Sign in to join
-        </Link>
+        <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleGuestJoin(); }}>
+          <input
+            className="auth-input"
+            type="text"
+            placeholder="Your name"
+            value={guestName}
+            onChange={(e) => { setGuestName(e.target.value); setGuestError(""); }}
+            maxLength={40}
+            autoComplete="off"
+            autoFocus
+          />
+          {guestError && <p className="auth-error">{guestError}</p>}
+          <button className="auth-submit" type="submit" disabled={guestLoading || !guestName.trim()}>
+            {guestLoading ? "Joining…" : "Join"}
+          </button>
+        </form>
+        <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "1.25rem" }}>
+          Have an account?{" "}
+          <Link href={`/auth/login?redirect=${encodeURIComponent(`/live/play/${code}`)}`} style={{ color: "var(--accent)" }}>
+            Sign in
+          </Link>
+        </p>
       </div>
     );
   }
