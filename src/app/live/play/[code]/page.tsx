@@ -459,7 +459,7 @@ function PlayInner({ code }: { code: string }) {
 
       {isMember && spotlightActive && (
         <div style={{ position: "sticky", bottom: 0, marginTop: "2rem", padding: "0.75rem 0", background: "var(--bg-surface)", borderTop: "1px solid var(--border-light)" }}>
-          <ReactionBar onReact={sendReaction} />
+          <ReactionBar onReact={(kind) => { addBurst(kind); sendReaction(kind); }} />
         </div>
       )}
       <ReactionBurstLayer bursts={bursts} />

@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { CurrentQuizRound } from "@/types/database";
 
 interface QuizQuestionCardProps {
@@ -34,18 +35,27 @@ export default function QuizQuestionCard({ round, busy, errorMessage, onAnswer }
         {choices.map((c) => {
           const mine = round.my_answer?.toLowerCase() === c.label.toLowerCase();
           const isCorrect = revealed && round.correct_answer?.toLowerCase() === c.label.toLowerCase();
+          // After reveal: the correct answer is GREEN, the user's wrong pick is
+          // RED, everything else dims. Before reveal: the selected one is accent.
+          const revealStyle: CSSProperties | undefined = revealed
+            ? isCorrect
+              ? { borderColor: "var(--success)", boxShadow: "inset 0 0 0 2px var(--success)", color: "var(--success)" }
+              : mine
+                ? { borderColor: "var(--danger)", boxShadow: "inset 0 0 0 2px var(--danger)", color: "var(--danger)", opacity: 0.9 }
+                : { opacity: 0.5 }
+            : undefined;
           return (
             <button
               key={c.label}
               type="button"
-              className={`live-option-btn${mine ? " selected" : ""}`}
+              className={`live-option-btn${mine && !revealed ? " selected" : ""}`}
               disabled={locked || revealed || busy}
               onClick={() => onAnswer(c.label)}
-              style={isCorrect ? { borderColor: "var(--accent)", boxShadow: "inset 0 0 0 1px var(--accent)" } : undefined}
+              style={revealStyle}
             >
               {round.question_type === "mcq" ? `${c.label}. ${c.text}` : c.text}
-              {revealed && isCorrect ? "  ✓" : ""}
-              {revealed && mine && !isCorrect ? "  ✗" : ""}
+              {revealed && isCorrect ? "  ✓ correct" : ""}
+              {revealed && mine && !isCorrect ? "  ✗ your answer" : ""}
             </button>
           );
         })}

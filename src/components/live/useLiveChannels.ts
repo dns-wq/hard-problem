@@ -243,8 +243,9 @@ export function useQuizAnswersChannel(
 
 // Ephemeral reaction bursts via Supabase BROADCAST (no table, no postgres_changes).
 // The one channel phones share — justified because it's tiny throttled presets,
-// never persisted. Returns a throttled sender; every reaction (incl. your own,
-// self:true) flows back through onReaction so the burst layer has one path.
+// never persisted. Returns a throttled sender; the caller bursts its OWN reaction
+// locally (instant feedback, no dependence on the echo) and broadcasts to others
+// (self:false), who burst via onReaction.
 export function useReactionsChannel(
   sessionId: string | null | undefined,
   enabled: boolean,
@@ -259,7 +260,7 @@ export function useReactionsChannel(
     if (!sessionId || !enabled) return;
     const supabase = createClient();
     const channel = supabase.channel(`live-reactions-${sessionId}`, {
-      config: { broadcast: { self: true } },
+      config: { broadcast: { self: false } },
     });
     channel
       .on("broadcast", { event: "reaction" }, (msg) => {
