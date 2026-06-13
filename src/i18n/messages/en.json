@@ -1,0 +1,36 @@
+{
+  "nav.topics": "Topics",
+  "nav.concepts": "Concepts",
+  "nav.about": "About",
+  "nav.profile": "Profile",
+  "nav.signOut": "Sign out",
+  "nav.signIn": "Sign in",
+  "nav.signUp": "Sign up",
+  "nav.switchLanguage": "Switch language",
+  "nav.toggleTheme": "Toggle theme",
+
+  "live.join.title": "Join a live session",
+  "live.join.subtitle": "Enter the code on the host's screen, or scan their QR code with your camera.",
+  "live.join.cta": "Join session",
+  "live.join.error.badCode": "Codes are 6 letters/digits — check the host screen.",
+  "live.join.upcomingRsvps": "Your upcoming RSVPs",
+  "live.join.hostedSessions": "Sessions you host",
+  "live.join.untitledTopic": "Untitled topic",
+  "live.join.liveNow": "Live now",
+  "live.join.scheduled": "Scheduled",
+  "live.join.hostHint": "Want to host one? Open any topic and choose \"Host live session\".",
+
+  "live.status.lobby": "In lobby",
+  "live.status.voting": "Voting open",
+  "live.status.revealed": "Results revealed",
+  "live.status.ended": "Ended",
+
+  "live.guest.title": "Join the live session",
+  "live.guest.hint": "Enter your name to jump in — no account needed.",
+  "live.guest.namePlaceholder": "Your name",
+  "live.guest.error.noName": "Enter a name to join.",
+  "live.guest.cta": "Join",
+  "live.guest.cta.loading": "Joining…",
+  "live.guest.haveAccount": "Have an account?",
+  "live.guest.signIn": "Sign in"
+}

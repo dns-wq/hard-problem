@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 import { usePlaySessionChannel, useReactionsChannel } from "@/components/live/useLiveChannels";
 import TallyBars from "@/components/live/TallyBars";
 import SpotlightCallout from "@/components/live/SpotlightCallout";
@@ -17,6 +18,7 @@ import ReactionBurstLayer, { type ReactionBurst } from "@/components/live/Reacti
 import type { ReactionKind } from "@/types/database";
 
 function PlayInner({ code }: { code: string }) {
+  const t = useT();
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [joined, setJoined] = useState(false);
@@ -34,7 +36,7 @@ function PlayInner({ code }: { code: string }) {
   async function handleGuestJoin() {
     const name = guestName.trim();
     if (!name) {
-      setGuestError("Enter a name to join.");
+      setGuestError(t("live.guest.error.noName"));
       return;
     }
     setGuestLoading(true);
@@ -241,15 +243,15 @@ function PlayInner({ code }: { code: string }) {
   if (!user) {
     return (
       <div className="auth-container" style={{ textAlign: "center" }}>
-        <h1 className="auth-title">Join the live session</h1>
+        <h1 className="auth-title">{t("live.guest.title")}</h1>
         <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.65, marginBottom: "1.25rem" }}>
-          Enter your name to jump in — no account needed.
+          {t("live.guest.hint")}
         </p>
         <form className="auth-form" onSubmit={(e) => { e.preventDefault(); handleGuestJoin(); }}>
           <input
             className="auth-input"
             type="text"
-            placeholder="Your name"
+            placeholder={t("live.guest.namePlaceholder")}
             value={guestName}
             onChange={(e) => { setGuestName(e.target.value); setGuestError(""); }}
             maxLength={40}
@@ -258,13 +260,13 @@ function PlayInner({ code }: { code: string }) {
           />
           {guestError && <p className="auth-error">{guestError}</p>}
           <button className="auth-submit" type="submit" disabled={guestLoading || !guestName.trim()}>
-            {guestLoading ? "Joining…" : "Join"}
+            {guestLoading ? t("live.guest.cta.loading") : t("live.guest.cta")}
           </button>
         </form>
         <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "1.25rem" }}>
-          Have an account?{" "}
+          {t("live.guest.haveAccount")}{" "}
           <Link href={`/auth/login?redirect=${encodeURIComponent(`/live/play/${code}`)}`} style={{ color: "var(--accent)" }}>
-            Sign in
+            {t("live.guest.signIn")}
           </Link>
         </p>
       </div>

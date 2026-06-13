@@ -52,18 +52,18 @@
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), var(--font-sans-tc), system-ui, -apple-system, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 h1, h2, h3, h4 {
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), var(--font-sans-tc), system-ui, sans-serif;
   letter-spacing: -0.012em;
 }
 
 /* Reading serif for framing notes, paper excerpts, and long-form prose */
 .prose-serif {
-  font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+  font-family: var(--font-serif), var(--font-serif-tc), Georgia, "Times New Roman", serif;
   line-height: 1.7;
 }
 
@@ -253,7 +253,7 @@ h1, h2, h3, h4 {
 /* ===== Framing Note ===== */
 
 .framing-note {
-  font-family: var(--font-serif), Georgia, serif;
+  font-family: var(--font-serif), var(--font-serif-tc), Georgia, serif;
   font-size: 1.05rem;
   line-height: 1.75;
   color: var(--text-primary);
@@ -320,7 +320,7 @@ h1, h2, h3, h4 {
 }
 
 .contribution-body {
-  font-family: var(--font-serif), Georgia, serif;
+  font-family: var(--font-serif), var(--font-serif-tc), Georgia, serif;
   font-size: 0.97rem;
   line-height: 1.72;
   color: var(--text-primary);

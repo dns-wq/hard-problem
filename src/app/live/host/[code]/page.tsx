@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import QRCode from "react-qr-code";
 import { trpc } from "@/lib/trpc/client";
+import { useLocale } from "@/i18n/LocaleProvider";
 import {
   usePlaySessionChannel,
   useHostSessionChannel,
@@ -45,6 +46,7 @@ export default function HostSessionPage() {
   const params = useParams<{ code: string }>();
   const code = params.code.toUpperCase();
   const router = useRouter();
+  const { locale } = useLocale();
   const [pendingAction, setPendingAction] = useState<HostAction | null>(null);
   const [actionError, setActionError] = useState("");
   const [origin, setOrigin] = useState("");
@@ -261,7 +263,9 @@ export default function HostSessionPage() {
 
   const participantCount = sessionQuery.data?.participantCount ?? 0;
   const tally = tallyQuery.data;
-  const joinUrl = origin ? `${origin}/live/play/${code}` : "";
+  // Carry the host's language into the QR so attendees land in the same locale
+  // on first paint (LocaleProvider adopts ?lang= on mount and persists it).
+  const joinUrl = origin ? `${origin}/live/play/${code}?lang=${locale}` : "";
 
   const raffle = !!session?.raffle_mode;
   const canDraw = status === "voting" || status === "revealed";

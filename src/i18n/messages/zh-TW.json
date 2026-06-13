@@ -1,0 +1,36 @@
+{
+  "nav.topics": "議題",
+  "nav.concepts": "概念",
+  "nav.about": "關於",
+  "nav.profile": "個人檔案",
+  "nav.signOut": "登出",
+  "nav.signIn": "登入",
+  "nav.signUp": "註冊",
+  "nav.switchLanguage": "切換語言",
+  "nav.toggleTheme": "切換主題",
+
+  "live.join.title": "加入即時場次",
+  "live.join.subtitle": "輸入主持人畫面上的代碼，或用相機掃描 QR code。",
+  "live.join.cta": "加入場次",
+  "live.join.error.badCode": "代碼是 6 位英數字，請對照主持人畫面確認。",
+  "live.join.upcomingRsvps": "你即將參加的場次",
+  "live.join.hostedSessions": "你主持的場次",
+  "live.join.untitledTopic": "未命名議題",
+  "live.join.liveNow": "進行中",
+  "live.join.scheduled": "已排定",
+  "live.join.hostHint": "想自己開一場嗎？打開任一議題，選擇「主持即時場次」。",
+
+  "live.status.lobby": "等待中",
+  "live.status.voting": "投票進行中",
+  "live.status.revealed": "已公布結果",
+  "live.status.ended": "已結束",
+
+  "live.guest.title": "加入即時場次",
+  "live.guest.hint": "輸入名字就能加入，免註冊。",
+  "live.guest.namePlaceholder": "你的名字",
+  "live.guest.error.noName": "請輸入名字",
+  "live.guest.cta": "加入",
+  "live.guest.cta.loading": "加入中…",
+  "live.guest.haveAccount": "已經有帳號了嗎？",
+  "live.guest.signIn": "登入"
+}

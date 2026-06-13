@@ -6,20 +6,15 @@ import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { trpc } from "@/lib/trpc/client";
+import { useLocale } from "@/i18n/LocaleProvider";
 import { LIVE_CODE_REGEX } from "@/lib/liveCode";
-
-const STATUS_LABEL: Record<string, string> = {
-  lobby: "In lobby",
-  voting: "Voting open",
-  revealed: "Results revealed",
-  ended: "Ended",
-};
 
 export default function LivePage() {
   const [code, setCode] = useState("");
   const [formError, setFormError] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
+  const { t, locale } = useLocale();
 
   useEffect(() => {
     const supabase = createClient();
@@ -44,7 +39,7 @@ export default function LivePage() {
     // Format check only — the authoritative lookup happens on the play page
     // after its auth gate (byCode is a protected, rate-limited procedure)
     if (!LIVE_CODE_REGEX.test(normalized)) {
-      setFormError("Codes are 6 letters/digits — check the host screen.");
+      setFormError(t("live.join.error.badCode"));
       return;
     }
     router.push(`/live/play/${normalized}`);
@@ -52,9 +47,9 @@ export default function LivePage() {
 
   return (
     <div className="auth-container">
-      <h1 className="auth-title">Join a live session</h1>
+      <h1 className="auth-title">{t("live.join.title")}</h1>
       <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.65, marginBottom: "1.25rem" }}>
-        Enter the code on the host&apos;s screen, or scan their QR code with your camera.
+        {t("live.join.subtitle")}
       </p>
 
       <form className="auth-form" onSubmit={handleSubmit}>
@@ -75,14 +70,14 @@ export default function LivePage() {
         />
         {formError && <p className="auth-error">{formError}</p>}
         <button className="auth-submit" type="submit">
-          Join session
+          {t("live.join.cta")}
         </button>
       </form>
 
       {!!myRsvps?.length && (
         <section style={{ marginTop: "2.5rem" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-            Your upcoming RSVPs
+            {t("live.join.upcomingRsvps")}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {myRsvps.map((r: { session_id: string; code: string; status: string; starts_at: string | null; topic_title: string }) => (
@@ -106,10 +101,10 @@ export default function LivePage() {
                 </span>
                 <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
                   {r.status !== "lobby"
-                    ? "Live now"
+                    ? t("live.join.liveNow")
                     : r.starts_at
-                      ? new Date(r.starts_at).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
-                      : "Scheduled"}
+                      ? new Date(r.starts_at).toLocaleString(locale, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })
+                      : t("live.join.scheduled")}
                 </span>
               </Link>
             ))}
@@ -120,7 +115,7 @@ export default function LivePage() {
       {!!mySessions?.length && (
         <section style={{ marginTop: "2.5rem" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-            Sessions you host
+            {t("live.join.hostedSessions")}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {mySessions.map((s) => (
@@ -140,10 +135,10 @@ export default function LivePage() {
                 }}
               >
                 <span style={{ fontSize: "0.85rem", color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {(s.topic as { title?: string } | null)?.title ?? "Untitled topic"}
+                  {(s.topic as { title?: string } | null)?.title ?? t("live.join.untitledTopic")}
                 </span>
                 <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", whiteSpace: "nowrap" }}>
-                  {s.code} · {STATUS_LABEL[s.status] ?? s.status}
+                  {s.code} · {t(`live.status.${s.status}`)}
                 </span>
               </Link>
             ))}
@@ -152,7 +147,7 @@ export default function LivePage() {
       )}
 
       <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "2rem" }}>
-        Want to host one? Open any topic and choose “Host live session”.
+        {t("live.join.hostHint")}
       </p>
     </div>
   );
