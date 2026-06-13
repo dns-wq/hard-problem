@@ -1,18 +1,25 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { LOCALE_COOKIE, resolveLocale } from "@/i18n/config";
 
 export const createTRPCContext = async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [{ data: { user } }, cookieStore, headerList] = await Promise.all([
+    supabase.auth.getUser(),
+    cookies(),
+    headers(),
+  ]);
 
-  return {
-    supabase,
-    user,
-  };
+  // The active content locale for this request — drives the content-translation
+  // overlay (src/lib/i18n/contentOverlay.ts). Cookie wins (set by the language
+  // switcher / a ?lang= join link); else Accept-Language. Same resolver the root
+  // layout uses, so server content and the client UI agree.
+  const locale = resolveLocale(cookieStore.get(LOCALE_COOKIE)?.value, headerList.get("accept-language"));
+
+  return { supabase, user, locale };
 };
 
 const t = initTRPC.context<typeof createTRPCContext>().create({

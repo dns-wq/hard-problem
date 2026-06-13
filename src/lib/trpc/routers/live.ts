@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/server";
 import { LIVE_CODE_ALPHABET, LIVE_CODE_REGEX } from "@/lib/liveCode";
+import { overlayOne } from "@/lib/i18n/contentOverlay";
 import type {
   CurrentSpotlight,
   DrawResult,
@@ -562,7 +563,11 @@ export const liveRouter = createTRPCRouter({
         }
         throw error;
       }
-      return (data?.[0] ?? null) as CurrentQuizRound | null;
+      const round = (data?.[0] ?? null) as CurrentQuizRound | null;
+      // The round froze the English text at push time; overlay zh-TW via the source
+      // quiz_question_id (question_text / option text / explanation — never the
+      // correct_answer label, which grading depends on).
+      return overlayOne(ctx.supabase, ctx.locale, "quiz_question", round, { idKey: "quiz_question_id" });
     }),
 
   // Submit an answer to the current round — first answer wins (lock-in) (protected)
