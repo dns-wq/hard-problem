@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/i18n/LocaleProvider";
+
 interface TallyBarOption {
   optionId: string;
   label: string;
@@ -17,6 +19,7 @@ interface TallyBarsProps {
 
 // Proportional result bars — visual language borrowed from DiscussionLandscape
 export default function TallyBars({ options, total, highlightOptionId, large }: TallyBarsProps) {
+  const t = useT();
   if (!options.length) return null;
 
   const max = Math.max(...options.map((o) => o.count), 1);
@@ -46,7 +49,7 @@ export default function TallyBars({ options, total, highlightOptionId, large }: 
                 {label}
                 {isMine && (
                   <span style={{ fontSize: countSize, fontWeight: 400, color: "var(--text-muted)", marginLeft: 8 }}>
-                    your vote
+                    {t("live.tally.yourVote")}
                   </span>
                 )}
               </span>

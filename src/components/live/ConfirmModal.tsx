@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "@/i18n/LocaleProvider";
+
 interface ConfirmModalProps {
   title: string;
   body: string;
@@ -11,6 +13,7 @@ interface ConfirmModalProps {
 
 // Host-screen confirmation for actions the whole room sees (Reveal/Reopen/End)
 export default function ConfirmModal({ title, body, confirmLabel, onConfirm, onCancel, busy }: ConfirmModalProps) {
+  const t = useT();
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -18,10 +21,10 @@ export default function ConfirmModal({ title, body, confirmLabel, onConfirm, onC
         <p className="modal-body">{body}</p>
         <div className="modal-actions">
           <button type="button" className="modal-btn" onClick={onCancel} disabled={busy}>
-            Cancel
+            {t("common.cancel")}
           </button>
           <button type="button" className="modal-btn modal-btn-primary" onClick={onConfirm} disabled={busy}>
-            {busy ? "Working…" : confirmLabel}
+            {busy ? t("live.confirm.working") : confirmLabel}
           </button>
         </div>
       </div>

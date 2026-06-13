@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
+import { useLocale } from "@/i18n/LocaleProvider";
 
 interface OptionDraft {
   label: string;
@@ -11,6 +12,7 @@ interface OptionDraft {
 }
 
 function NewSessionForm() {
+  const { t } = useLocale();
   const router = useRouter();
   const topicSlug = useSearchParams().get("topic");
 
@@ -48,11 +50,11 @@ function NewSessionForm() {
     const trimmed = label.trim();
     if (!trimmed) return;
     if (options.length >= 6) {
-      setFormError("Six options is the maximum.");
+      setFormError(t("live.new.error.maxOptions"));
       return;
     }
     if (options.some((o) => o.label.toLowerCase() === trimmed.toLowerCase())) {
-      setFormError("That option is already in the list.");
+      setFormError(t("live.new.error.duplicateOption"));
       return;
     }
     setFormError("");
@@ -71,9 +73,9 @@ function NewSessionForm() {
   if (!topicSlug) {
     return (
       <div className="page-narrow">
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "0.75rem" }}>Host a live session</h1>
+        <h1 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "0.75rem" }}>{t("live.new.title")}</h1>
         <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: "1.25rem" }}>
-          Pick the topic your room will discuss:
+          {t("live.new.picker.hint")}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {(topicList ?? []).map((t) => (
@@ -101,7 +103,7 @@ function NewSessionForm() {
   if (isLoading) {
     return (
       <div className="page-narrow">
-        <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p>
       </div>
     );
   }
@@ -109,9 +111,9 @@ function NewSessionForm() {
   if (error || !topic) {
     return (
       <div className="page-narrow" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <p style={{ color: "var(--text-muted)" }}>Topic not found.</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("live.new.error.topicNotFound")}</p>
         <Link href="/topics" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          ← All topics
+          {t("nav.allTopics")}
         </Link>
       </div>
     );
@@ -128,24 +130,23 @@ function NewSessionForm() {
         ← {topic.title}
       </Link>
 
-      <h1 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "1.5rem" }}>Host a live session</h1>
+      <h1 style={{ fontSize: "1.4rem", fontWeight: 800, marginBottom: "1.5rem" }}>{t("live.new.title")}</h1>
 
       <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.5rem", fontSize: "0.88rem", color: "var(--text-secondary)", cursor: "pointer" }}>
         <input type="checkbox" checked={raffleMode} onChange={(e) => setRaffleMode(e.target.checked)} />
-        Raffle mode (摸彩) — skip the vote, just draw winners from the room
+        {t("live.new.raffle.toggleLabel")}
       </label>
 
       {raffleMode && (
         <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "1.5rem" }}>
-          A pure prize draw: people join with the code or QR, you hit <strong>Draw a winner</strong>, and the
-          projector lands on a random name. No question, no vote options.
+          {t("live.new.raffle.hint")}
         </p>
       )}
 
       {!raffleMode && (
         <>
       <div className="form-group">
-        <label className="form-label" htmlFor="live-question">Question for the room</label>
+        <label className="form-label" htmlFor="live-question">{t("live.new.question.label")}</label>
         <textarea
           id="live-question"
           className="form-textarea"
@@ -160,11 +161,11 @@ function NewSessionForm() {
       </div>
 
       <div className="form-group">
-        <span className="form-label">Vote options (2–6)</span>
+        <span className="form-label">{t("live.new.options.label")}</span>
 
         {options.length === 0 && (
           <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", margin: "0.25rem 0 0.5rem" }}>
-            Add the stances the room will vote between.
+            {t("live.new.options.empty")}
           </p>
         )}
 
@@ -183,9 +184,9 @@ function NewSessionForm() {
               }}
             >
               <span style={{ flex: 1, fontSize: "0.88rem" }}>{o.label}</span>
-              <button type="button" className="live-icon-btn" onClick={() => moveOption(i, -1)} disabled={i === 0} aria-label="Move up">↑</button>
-              <button type="button" className="live-icon-btn" onClick={() => moveOption(i, 1)} disabled={i === options.length - 1} aria-label="Move down">↓</button>
-              <button type="button" className="live-icon-btn" onClick={() => setOptions(options.filter((_, j) => j !== i))} aria-label="Remove">✕</button>
+              <button type="button" className="live-icon-btn" onClick={() => moveOption(i, -1)} disabled={i === 0} aria-label={t("live.new.option.moveUp")}>↑</button>
+              <button type="button" className="live-icon-btn" onClick={() => moveOption(i, 1)} disabled={i === options.length - 1} aria-label={t("live.new.option.moveDown")}>↓</button>
+              <button type="button" className="live-icon-btn" onClick={() => setOptions(options.filter((_, j) => j !== i))} aria-label={t("live.new.option.remove")}>✕</button>
             </div>
           ))}
         </div>
@@ -193,7 +194,7 @@ function NewSessionForm() {
         {suggestions.length > 0 && (
           <div style={{ marginBottom: "0.75rem" }}>
             <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: "0.4rem" }}>
-              From this topic&apos;s discussion:
+              {t("live.new.suggestions.label")}
             </span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
               {suggestions.map((s) => (
@@ -214,7 +215,7 @@ function NewSessionForm() {
           <input
             className="form-input"
             type="text"
-            placeholder="Add an option…"
+            placeholder={t("live.new.option.placeholder")}
             value={customLabel}
             onChange={(e) => setCustomLabel(e.target.value)}
             onKeyDown={(e) => {
@@ -235,7 +236,7 @@ function NewSessionForm() {
               setCustomLabel("");
             }}
           >
-            Add
+            {t("live.new.option.addCta")}
           </button>
         </div>
       </div>
@@ -244,7 +245,7 @@ function NewSessionForm() {
 
       <div className="form-group">
         <label className="form-label" htmlFor="live-starts-at">
-          Schedule for later <span style={{ fontWeight: 400, color: "var(--text-muted)", textTransform: "none" }}>— optional; leave blank to run now</span>
+          {t("live.new.schedule.label")} <span style={{ fontWeight: 400, color: "var(--text-muted)", textTransform: "none" }}>{t("live.new.schedule.labelOptional")}</span>
         </label>
         <input
           id="live-starts-at"
@@ -255,7 +256,7 @@ function NewSessionForm() {
         />
         {startsAt && (
           <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-            Creates a published session people can RSVP to via a shareable link.
+            {t("live.new.schedule.hint")}
           </span>
         )}
       </div>
@@ -277,11 +278,17 @@ function NewSessionForm() {
           })
         }
       >
-        {createSession.isPending ? "Creating…" : startsAt ? "Schedule session" : raffleMode ? "Create raffle" : "Create session"}
+        {createSession.isPending
+          ? t("live.new.cta.creating")
+          : startsAt
+            ? t("live.new.cta.schedule")
+            : raffleMode
+              ? t("live.new.cta.createRaffle")
+              : t("live.new.cta.create")}
       </button>
       {!raffleMode && options.length < 2 && (
         <span style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginLeft: "0.75rem" }}>
-          Add at least {2 - options.length} more option{options.length === 1 ? "" : "s"}.
+          {t("live.new.minOptionsHint", { count: 2 - options.length })}
         </span>
       )}
     </div>
@@ -291,8 +298,9 @@ function NewSessionForm() {
 // useSearchParams requires a Suspense boundary on statically prerendered pages
 // (Next 16 fails the production build without it).
 export default function NewSessionPage() {
+  const { t } = useLocale();
   return (
-    <Suspense fallback={<div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>Loading…</p></div>}>
+    <Suspense fallback={<div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p></div>}>
       <NewSessionForm />
     </Suspense>
   );

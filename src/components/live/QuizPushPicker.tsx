@@ -1,6 +1,7 @@
 "use client";
 
 import type { QuizQuestionType } from "@/types/database";
+import { useT } from "@/i18n/LocaleProvider";
 
 interface PickerQuestion {
   id: string;
@@ -17,8 +18,9 @@ interface QuizPushPickerProps {
 
 // Host-side list of the topic's quiz_questions to push into the room.
 export default function QuizPushPicker({ questions, currentQuestionId, busy, onPush }: QuizPushPickerProps) {
+  const t = useT();
   if (questions.length === 0) {
-    return <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>This topic has no quiz questions yet.</p>;
+    return <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{t("live.quiz.noQuestions")}</p>;
   }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -43,7 +45,7 @@ export default function QuizPushPicker({ questions, currentQuestionId, busy, onP
             onClick={() => onPush(q.id)}
             style={{ padding: "0.4rem 1rem", fontSize: "0.85rem" }}
           >
-            {currentQuestionId === q.id ? "Re-ask" : "Ask"}
+            {currentQuestionId === q.id ? t("live.quiz.reask") : t("live.quiz.ask")}
           </button>
         </div>
       ))}

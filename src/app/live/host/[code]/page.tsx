@@ -23,30 +23,13 @@ import ReactionBurstLayer, { type ReactionBurst } from "@/components/live/Reacti
 import type { SpotlightMode, ReactionKind } from "@/types/database";
 
 type HostAction = "revealed" | "voting" | "ended";
-
-const CONFIRMS: Record<HostAction, { title: string; body: string; confirmLabel: string }> = {
-  revealed: {
-    title: "Reveal results?",
-    body: "Voting closes and every phone in the room will see the result bars. You can reopen voting afterwards if needed.",
-    confirmLabel: "Reveal results",
-  },
-  voting: {
-    title: "Reopen voting?",
-    body: "The results leave every screen and the room can vote (or change votes) again.",
-    confirmLabel: "Reopen voting",
-  },
-  ended: {
-    title: "End this session?",
-    body: "This is final — the room sees a session-ended screen with a link to the topic discussion.",
-    confirmLabel: "End session",
-  },
-};
+// Confirm-dialog copy is resolved at render via t(`live.confirm.${action}.*`).
 
 export default function HostSessionPage() {
   const params = useParams<{ code: string }>();
   const code = params.code.toUpperCase();
   const router = useRouter();
-  const { locale } = useLocale();
+  const { t, locale } = useLocale();
   const [pendingAction, setPendingAction] = useState<HostAction | null>(null);
   const [actionError, setActionError] = useState("");
   const [origin, setOrigin] = useState("");
@@ -243,7 +226,7 @@ export default function HostSessionPage() {
   if (byCode.isLoading) {
     return (
       <div className="page" style={{ maxWidth: 900 }}>
-        <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p>
       </div>
     );
   }
@@ -251,9 +234,9 @@ export default function HostSessionPage() {
   if (byCode.error || !preview) {
     return (
       <div className="page" style={{ maxWidth: 900, textAlign: "center", paddingTop: "4rem" }}>
-        <p style={{ color: "var(--text-muted)" }}>{byCode.error?.message ?? "No session with that code."}</p>
+        <p style={{ color: "var(--text-muted)" }}>{byCode.error?.message ?? t("live.error.noSession")}</p>
         <Link href="/live" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          ← Live sessions
+          {t("nav.liveSessions")}
         </Link>
       </div>
     );
@@ -292,20 +275,20 @@ export default function HostSessionPage() {
             value={selectedMode}
             onChange={(e) => setSelectedMode(e.target.value as SpotlightMode)}
             disabled={drawMut.isPending || isDrawing}
-            aria-label="Draw mode"
+            aria-label={t("live.host.draw.modeLabel")}
           >
-            <option value="uniform">Random</option>
-            <option value="no_repeat">No repeats</option>
-            <option value="minority_weighted">Favor minority (3×)</option>
-            <option value="minority_steelman">Minority steelman</option>
+            <option value="uniform">{t("live.host.draw.mode.uniform")}</option>
+            <option value="no_repeat">{t("live.host.draw.mode.noRepeat")}</option>
+            <option value="minority_weighted">{t("live.host.draw.mode.minorityWeighted")}</option>
+            <option value="minority_steelman">{t("live.host.draw.mode.minoritySteelman")}</option>
           </select>
         )}
         <button type="button" className="btn btn-primary" disabled={drawMut.isPending || isDrawing} onClick={handleDraw}>
-          {isDrawing ? "Drawing…" : spotlight ? "Draw again" : raffle ? "Draw a winner" : "Call on someone"}
+          {isDrawing ? t("live.draw.drawing") : spotlight ? t("live.host.draw.cta.again") : raffle ? t("live.host.draw.cta.winner") : t("live.host.draw.cta.callOn")}
         </button>
         {spotlight && (
           <button type="button" className="btn" disabled={clearMut.isPending} onClick={() => clearMut.mutate({ sessionId: preview.id })}>
-            Clear
+            {t("live.host.draw.clear")}
           </button>
         )}
       </div>
@@ -321,14 +304,14 @@ export default function HostSessionPage() {
   const quizBlock = canDraw && !raffle ? (
     <div style={{ marginTop: "2.5rem", borderTop: "1px solid var(--border-light)", paddingTop: "1.5rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>Quiz</h2>
+        <h2 style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>{t("live.host.quiz.heading")}</h2>
         {quizLeaders.length > 0 && (
           <button
             type="button"
             className="live-chip"
             onClick={() => setLeaderboardPublic.mutate({ sessionId: preview.id, isPublic: !session?.quiz_leaderboard_public })}
           >
-            {session?.quiz_leaderboard_public ? "Hide leaderboard from room" : "Show leaderboard to room"}
+            {session?.quiz_leaderboard_public ? t("live.host.quiz.hideLeaderboard") : t("live.host.quiz.showLeaderboard")}
           </button>
         )}
       </div>
@@ -338,7 +321,7 @@ export default function HostSessionPage() {
           <p style={{ fontSize: "1.4rem", fontWeight: 700, lineHeight: 1.3 }}>{quizRound.question_text}</p>
           {quizRound.status === "asking" ? (
             <div style={{ marginTop: "1rem" }}>
-              <p style={{ fontSize: "1.1rem", color: "var(--text-secondary)" }}>{quizRound.answer_count} answered</p>
+              <p style={{ fontSize: "1.1rem", color: "var(--text-secondary)" }}>{t("live.host.quiz.answeredCount", { count: quizRound.answer_count })}</p>
               <button
                 type="button"
                 className="btn btn-primary"
@@ -346,7 +329,7 @@ export default function HostSessionPage() {
                 disabled={revealQuiz.isPending}
                 onClick={() => revealQuiz.mutate({ sessionId: preview.id, roundId: quizRound.round_id })}
               >
-                {revealQuiz.isPending ? "Revealing…" : "Reveal answers"}
+                {revealQuiz.isPending ? t("live.host.quiz.cta.revealing") : t("live.host.quiz.cta.reveal")}
               </button>
             </div>
           ) : (
@@ -358,7 +341,10 @@ export default function HostSessionPage() {
                 large
               />
               <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: "0.6rem" }}>
-                Correct answer: <strong>{quizRound.correct_answer}</strong>
+                {(() => {
+                  const [before, after] = t("live.host.quiz.correctAnswer").split("{answer}");
+                  return <>{before}<strong>{quizRound.correct_answer}</strong>{after}</>;
+                })()}
               </p>
             </div>
           )}
@@ -377,7 +363,7 @@ export default function HostSessionPage() {
       {quizLeaders.length > 0 && (
         <div style={{ marginTop: "1.5rem" }}>
           <h3 style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.6rem" }}>
-            Leaderboard{session?.quiz_leaderboard_public ? "" : " (hidden from room)"}
+            {t("live.quiz.leaderboard")}{session?.quiz_leaderboard_public ? "" : t("live.host.quiz.leaderboardHiddenSuffix")}
           </h3>
           <QuizLeaderboard rows={quizLeaders} large />
         </div>
@@ -391,10 +377,10 @@ export default function HostSessionPage() {
       {/* Header: topic + question, or neutral raffle framing, distance-readable */}
       <div style={{ textAlign: "center", marginBottom: "2rem" }}>
         <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-muted)" }}>
-          {raffle ? "LUCKY DRAW · 摸彩" : preview.topic_title}
+          {raffle ? t("live.raffle.eyebrow") : preview.topic_title}
         </span>
         <h1 style={{ fontSize: "2rem", fontWeight: 800, lineHeight: 1.25, marginTop: "0.5rem" }}>
-          {raffle ? "Prize Draw" : session?.question || preview.question}
+          {raffle ? t("live.raffle.title") : session?.question || preview.question}
         </h1>
       </div>
 
@@ -408,10 +394,14 @@ export default function HostSessionPage() {
           )}
           <div className="live-code" style={{ marginTop: "1.5rem" }}>{code}</div>
           <p style={{ fontSize: "1.1rem", color: "var(--text-secondary)", marginTop: "0.5rem" }}>
-            Scan the code or go to <strong>{origin ? origin.replace(/^https?:\/\//, "") : ""}/live</strong>
+            {(() => {
+              const url = `${origin ? origin.replace(/^https?:\/\//, "") : ""}/live`;
+              const [before, after] = t("live.host.lobby.scanInstruction").split("{url}");
+              return <>{before}<strong>{url}</strong>{after}</>;
+            })()}
           </p>
           <p style={{ fontSize: "1.4rem", fontWeight: 700, marginTop: "1.5rem" }}>
-            {participantCount} {participantCount === 1 ? "person" : "people"} in the room
+            {t(participantCount === 1 ? "live.host.lobby.peopleInRoom.one" : "live.host.lobby.peopleInRoom.other", { count: participantCount })}
           </p>
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.5rem" }}>
             <button
@@ -421,19 +411,19 @@ export default function HostSessionPage() {
               onClick={() => setStatus.mutate({ sessionId: preview.id, status: "voting" })}
               disabled={setStatus.isPending}
             >
-              {setStatus.isPending ? "Opening…" : raffle ? "Start raffle" : "Open voting"}
+              {setStatus.isPending ? t("live.host.lobby.cta.opening") : raffle ? t("live.host.lobby.cta.startRaffle") : t("live.host.lobby.cta.openVoting")}
             </button>
             <button type="button" className="btn" onClick={() => setPendingAction("ended")}>
-              Cancel session
+              {t("live.host.lobby.cancelSession")}
             </button>
           </div>
 
           {session?.published && origin && (
             <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border-light)" }}>
               <p style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.4rem" }}>
-                Collecting RSVPs
+                {t("live.host.lobby.collectingRsvps")}
               </p>
-              <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>Share this link so people can reserve a spot:</p>
+              <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>{t("live.host.lobby.shareRsvpHint")}</p>
               <code style={{ display: "inline-block", marginTop: "0.5rem", fontSize: "0.85rem", color: "var(--accent)", wordBreak: "break-all" }}>
                 {origin}/live/rsvp?code={code}
               </code>
@@ -446,22 +436,25 @@ export default function HostSessionPage() {
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "1.25rem" }}>
             <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--accent)" }}>
-              {raffle ? "Raffle open" : "Voting open"}
+              {raffle ? t("live.host.voting.raffleOpen") : t("live.status.voting")}
             </span>
             <span style={{ fontSize: "1rem", color: "var(--text-secondary)" }}>
-              {raffle ? `${participantCount} in the draw` : `${tally?.total ?? 0} of ${participantCount} voted`} · join code{" "}
-              <strong>{code}</strong>
+              {raffle ? t("live.host.voting.raffleCount", { count: participantCount }) : t("live.host.voting.voteProgress", { voted: tally?.total ?? 0, total: participantCount })} ·{" "}
+              {(() => {
+                const [before, after] = t("live.host.voting.joinCode").split("{code}");
+                return <>{before}<strong>{code}</strong>{after}</>;
+              })()}
             </span>
           </div>
           {!raffle && <TallyBars options={tally?.options ?? []} total={tally?.total ?? 0} large />}
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: raffle ? "0.5rem" : "2.5rem" }}>
             {!raffle && (
               <button type="button" className="btn btn-primary" onClick={() => setPendingAction("revealed")}>
-                Reveal results
+                {t("live.confirm.revealed.cta")}
               </button>
             )}
             <button type="button" className="btn" onClick={() => setPendingAction("ended")}>
-              End session
+              {t("live.confirm.ended.cta")}
             </button>
           </div>
         </div>
@@ -471,16 +464,16 @@ export default function HostSessionPage() {
         <div>
           <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
             <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
-              Results · {tally?.total ?? 0} votes from {tally?.participantCount ?? participantCount} participants
+              {t("live.host.revealed.summary", { votes: tally?.total ?? 0, participants: tally?.participantCount ?? participantCount })}
             </span>
           </div>
           <TallyBars options={tally?.options ?? []} total={tally?.total ?? 0} large />
           <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "2.5rem" }}>
             <button type="button" className="btn" onClick={() => setPendingAction("voting")}>
-              Reopen voting
+              {t("live.confirm.voting.cta")}
             </button>
             <button type="button" className="btn btn-primary" onClick={() => setPendingAction("ended")}>
-              End session
+              {t("live.confirm.ended.cta")}
             </button>
           </div>
         </div>
@@ -493,7 +486,7 @@ export default function HostSessionPage() {
       {status === "ended" && (
         <div style={{ textAlign: "center", paddingTop: "1rem" }}>
           <p style={{ fontSize: "1.2rem", color: "var(--text-secondary)" }}>
-            Session ended — {tally?.total ?? 0} votes from {tally?.participantCount ?? participantCount} participants.
+            {t("live.host.ended.summary", { votes: tally?.total ?? 0, participants: tally?.participantCount ?? participantCount })}
           </p>
           <div style={{ marginTop: "1.5rem", maxWidth: 640, marginLeft: "auto", marginRight: "auto" }}>
             <TallyBars options={tally?.options ?? []} total={tally?.total ?? 0} />
@@ -502,15 +495,15 @@ export default function HostSessionPage() {
           {recapQuery.data && (
             <div style={{ marginTop: "2rem" }}>
               <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-                Session recap
+                {t("live.recap.heading")}
               </h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: "0.6rem", maxWidth: 640, margin: "0 auto" }}>
                 {[
-                  { label: "Participants", value: recapQuery.data.participant_count },
-                  { label: "RSVPs", value: recapQuery.data.rsvp_count },
-                  { label: "Votes", value: recapQuery.data.vote_count },
-                  { label: "Called on", value: recapQuery.data.spotlight_count },
-                  { label: "Quiz answers", value: recapQuery.data.quiz_answers },
+                  { label: t("live.recap.stat.participants"), value: recapQuery.data.participant_count },
+                  { label: t("live.recap.stat.rsvps"), value: recapQuery.data.rsvp_count },
+                  { label: t("live.recap.stat.votes"), value: recapQuery.data.vote_count },
+                  { label: t("live.recap.stat.calledOn"), value: recapQuery.data.spotlight_count },
+                  { label: t("live.recap.stat.quizAnswers"), value: recapQuery.data.quiz_answers },
                 ].map((s) => (
                   <div key={s.label} style={{ padding: "0.85rem", background: "var(--bg-surface)", border: "1px solid var(--border-light)", borderRadius: 10 }}>
                     <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--accent)" }}>{s.value}</div>
@@ -519,7 +512,7 @@ export default function HostSessionPage() {
                 ))}
               </div>
               <a href={`/api/live/${preview.id}/recap`} className="btn" style={{ marginTop: "1.25rem", display: "inline-block", textDecoration: "none" }}>
-                Export CSV
+                {t("live.recap.exportCsv")}
               </a>
             </div>
           )}
@@ -529,7 +522,7 @@ export default function HostSessionPage() {
             className="btn btn-primary"
             style={{ marginTop: "2rem", display: "inline-block", textDecoration: "none" }}
           >
-            Continue in the topic discussion →
+            {t("live.host.ended.continueDiscussion")}
           </Link>
         </div>
       )}
@@ -540,9 +533,9 @@ export default function HostSessionPage() {
 
       {pendingAction && (
         <ConfirmModal
-          title={CONFIRMS[pendingAction].title}
-          body={CONFIRMS[pendingAction].body}
-          confirmLabel={CONFIRMS[pendingAction].confirmLabel}
+          title={t(`live.confirm.${pendingAction}.title`)}
+          body={t(`live.confirm.${pendingAction}.body`)}
+          confirmLabel={t(`live.confirm.${pendingAction}.cta`)}
           busy={setStatus.isPending}
           onConfirm={() => setStatus.mutate({ sessionId: preview.id, status: pendingAction })}
           onCancel={() => setPendingAction(null)}

@@ -1,23 +1,25 @@
 "use client";
 
 import type { ReactionKind } from "@/types/database";
+import { useT } from "@/i18n/LocaleProvider";
 
-const PRESETS: { kind: ReactionKind; emoji: string; label: string }[] = [
-  { kind: "applause", emoji: "👏", label: "Applause" },
-  { kind: "laugh", emoji: "😂", label: "Laugh" },
-  { kind: "mindblown", emoji: "🤯", label: "Mind blown" },
-  { kind: "heart", emoji: "❤️", label: "Heart" },
+const PRESETS: { kind: ReactionKind; emoji: string }[] = [
+  { kind: "applause", emoji: "👏" },
+  { kind: "laugh", emoji: "😂" },
+  { kind: "mindblown", emoji: "🤯" },
+  { kind: "heart", emoji: "❤️" },
 ];
 
 // Tap a preset to broadcast an ephemeral reaction to the room (client-throttled).
 export default function ReactionBar({ onReact }: { onReact: (kind: ReactionKind) => void }) {
+  const t = useT();
   return (
     <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
       {PRESETS.map((p) => (
         <button
           key={p.kind}
           type="button"
-          aria-label={p.label}
+          aria-label={t(`live.reaction.label.${p.kind}`)}
           onClick={() => onReact(p.kind)}
           style={{
             fontSize: "1.5rem",

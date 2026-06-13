@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { trpc } from "@/lib/trpc/client";
+import { useLocale } from "@/i18n/LocaleProvider";
 
 interface RsvpRow {
   session_id: string;
@@ -16,6 +17,7 @@ interface RsvpRow {
 }
 
 function RsvpInner() {
+  const { t, locale } = useLocale();
   const code = (useSearchParams().get("code") ?? "").toUpperCase();
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -54,22 +56,22 @@ function RsvpInner() {
   });
 
   if (!authChecked || (user && !!code && byCode.isLoading)) {
-    return <div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>Loading…</p></div>;
+    return <div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p></div>;
   }
 
   if (!user) {
     return (
       <div className="auth-container" style={{ textAlign: "center" }}>
-        <h1 className="auth-title">RSVP to a live session</h1>
+        <h1 className="auth-title">{t("live.rsvp.signedOut.title")}</h1>
         <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", lineHeight: 1.65, marginBottom: "1.5rem" }}>
-          Sign in to reserve your spot — you&apos;ll get a calendar invite and a reminder.
+          {t("live.rsvp.signedOut.hint")}
         </p>
         <Link
           href={`/auth/login?redirect=${encodeURIComponent(`/live/rsvp?code=${code}`)}`}
           className="btn btn-primary"
           style={{ display: "inline-block", textDecoration: "none" }}
         >
-          Sign in to RSVP
+          {t("live.rsvp.signedOut.cta")}
         </Link>
       </div>
     );
@@ -78,9 +80,9 @@ function RsvpInner() {
   if (!code || byCode.error || !preview) {
     return (
       <div className="page-narrow" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <p style={{ color: "var(--text-muted)" }}>{byCode.error?.message ?? "No session with that code."}</p>
+        <p style={{ color: "var(--text-muted)" }}>{byCode.error?.message ?? t("live.error.noSession")}</p>
         <Link href="/live" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          ← Live sessions
+          {t("nav.liveSessions")}
         </Link>
       </div>
     );
@@ -98,7 +100,7 @@ function RsvpInner() {
 
       {startsAt && (
         <p style={{ fontSize: "0.95rem", color: "var(--text-secondary)", marginBottom: "1.25rem" }}>
-          {new Date(startsAt).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+          {new Date(startsAt).toLocaleString(locale, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
         </p>
       )}
 
@@ -106,24 +108,24 @@ function RsvpInner() {
 
       {preview.status !== "lobby" ? (
         <div>
-          <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>This session is already live.</p>
+          <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>{t("live.rsvp.alreadyLive")}</p>
           <Link href={`/live/play/${code}`} className="btn btn-primary" style={{ display: "inline-block", textDecoration: "none" }}>
-            Join now →
+            {t("live.rsvp.joinNow")}
           </Link>
         </div>
       ) : rsvped ? (
         <div>
-          <p style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem" }}>You&apos;re in. 🎟️</p>
+          <p style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem" }}>{t("live.rsvp.confirmed.title")}</p>
           <div style={{ display: "flex", gap: "0.6rem", justifyContent: "center", flexWrap: "wrap" }}>
             <a href={`/api/live/${preview.id}/ics`} className="btn" style={{ textDecoration: "none" }}>
-              Add to calendar
+              {t("live.rsvp.addToCalendar")}
             </a>
             <button type="button" className="btn" disabled={withdraw.isPending} onClick={() => withdraw.mutate({ sessionId: preview.id })}>
-              Withdraw RSVP
+              {t("live.rsvp.withdrawCta")}
             </button>
           </div>
           <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "1.25rem" }}>
-            We&apos;ll remind you before it starts. Come back here (or use the code <strong>{code}</strong>) to join.
+            {t("live.rsvp.confirmed.reminder", { code })}
           </p>
         </div>
       ) : (
@@ -133,7 +135,7 @@ function RsvpInner() {
           disabled={rsvp.isPending}
           onClick={() => rsvp.mutate({ sessionId: preview.id })}
         >
-          {rsvp.isPending ? "Reserving…" : "Reserve my spot"}
+          {rsvp.isPending ? t("live.rsvp.cta.reserving") : t("live.rsvp.cta.reserve")}
         </button>
       )}
     </div>
@@ -141,8 +143,9 @@ function RsvpInner() {
 }
 
 export default function RsvpPage() {
+  const { t } = useLocale();
   return (
-    <Suspense fallback={<div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>Loading…</p></div>}>
+    <Suspense fallback={<div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p></div>}>
       <RsvpInner />
     </Suspense>
   );

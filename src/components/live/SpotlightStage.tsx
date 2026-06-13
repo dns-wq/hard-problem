@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { useT } from "@/i18n/LocaleProvider";
 import type { CurrentSpotlight } from "@/types/database";
 
 interface SpotlightStageProps {
@@ -10,11 +11,12 @@ interface SpotlightStageProps {
   raffleMode: boolean;
 }
 
-const MODE_LABEL: Record<string, string> = {
-  uniform: "Random draw",
-  no_repeat: "No repeats",
-  minority_weighted: "Minority favored (3×)",
-  minority_steelman: "Minority steelman",
+// Maps the SpotlightMode enum to its catalog key suffix (live.spotlight.mode.*).
+const MODE_KEY: Record<string, string> = {
+  uniform: "uniform",
+  no_repeat: "noRepeat",
+  minority_weighted: "minorityWeighted",
+  minority_steelman: "minoritySteelman",
 };
 
 const eyebrowStyle: CSSProperties = {
@@ -29,6 +31,7 @@ const eyebrowStyle: CSSProperties = {
 // participant. The landed name is the server's truth (from the refetch / draw
 // RPC return) — the animation can only confirm it, never contradict it.
 export default function SpotlightStage({ spotlight, rosterNames, isDrawing, raffleMode }: SpotlightStageProps) {
+  const t = useT();
   const [flicker, setFlicker] = useState("");
 
   useEffect(() => {
@@ -41,7 +44,7 @@ export default function SpotlightStage({ spotlight, rosterNames, isDrawing, raff
     return () => clearInterval(id);
   }, [isDrawing, rosterNames]);
 
-  const eyebrow = raffleMode ? "LUCKY DRAW · 摸彩" : "SPOTLIGHT";
+  const eyebrow = raffleMode ? t("live.raffle.eyebrow") : t("live.spotlight.eyebrow");
 
   if (isDrawing) {
     return (
@@ -50,7 +53,7 @@ export default function SpotlightStage({ spotlight, rosterNames, isDrawing, raff
         <div className="live-code" style={{ marginTop: "1rem", letterSpacing: "0.04em", textIndent: 0, opacity: 0.85 }}>
           {flicker || rosterNames[0] || "…"}
         </div>
-        <p style={{ fontSize: "1rem", color: "var(--text-muted)", marginTop: "1rem" }}>Drawing…</p>
+        <p style={{ fontSize: "1rem", color: "var(--text-muted)", marginTop: "1rem" }}>{t("live.draw.drawing")}</p>
       </div>
     );
   }
@@ -63,7 +66,7 @@ export default function SpotlightStage({ spotlight, rosterNames, isDrawing, raff
       <div style={{ textAlign: "center", padding: "2.5rem 0" }}>
         <span style={eyebrowStyle}>{eyebrow}</span>
         <p style={{ fontSize: "1.6rem", fontWeight: 700, marginTop: "1rem", color: "var(--text-secondary)" }}>
-          Passed — draw again.
+          {t("live.spotlight.passed")}
         </p>
       </div>
     );
@@ -74,18 +77,20 @@ export default function SpotlightStage({ spotlight, rosterNames, isDrawing, raff
     <div style={{ textAlign: "center", padding: "2rem 0" }}>
       <span style={eyebrowStyle}>
         {eyebrow}
-        {!raffleMode && spotlight.mode ? ` · ${MODE_LABEL[spotlight.mode] ?? ""}` : ""}
+        {!raffleMode && spotlight.mode && MODE_KEY[spotlight.mode]
+          ? ` · ${t(`live.spotlight.mode.${MODE_KEY[spotlight.mode]}`)}`
+          : ""}
       </span>
       <div style={{ fontSize: "3rem", fontWeight: 800, lineHeight: 1.1, marginTop: "1rem" }}>
         {spotlight.drawn_display_name}
       </div>
       <p style={{ fontSize: "1.2rem", color: "var(--text-secondary)", marginTop: "0.75rem" }}>
-        {raffleMode ? "🎉 Winner!" : isPending ? "Share your thinking with the room." : "is sharing."}
+        {raffleMode ? t("live.spotlight.winner") : isPending ? t("live.spotlight.sharePrompt") : t("live.spotlight.isSharing")}
       </p>
       {isPending && (
         <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
-          drawn from {spotlight.pool_size} eligible
-          {spotlight.mode === "minority_weighted" ? " · minority voters 3× as likely" : ""}
+          {t("live.spotlight.pendingPool", { count: spotlight.pool_size })}
+          {spotlight.mode === "minority_weighted" ? t("live.spotlight.pendingMinoritySuffix") : ""}
         </p>
       )}
       {spotlight.outcome === "shared" && spotlight.note_shared && spotlight.drawn_note && (

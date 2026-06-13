@@ -158,7 +158,7 @@ function PlayInner({ code }: { code: string }) {
   const consentToggle = !raffle ? (
     <label style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "var(--text-secondary)", cursor: "pointer" }}>
       <input type="checkbox" checked={callablePref} onChange={(e) => toggleCallable(e.target.checked)} />
-      Open to being called on to share aloud
+      {t("live.play.consent.callable")}
     </label>
   ) : null;
 
@@ -234,7 +234,7 @@ function PlayInner({ code }: { code: string }) {
   if (!authChecked || (user && byCode.isLoading)) {
     return (
       <div className="page-narrow">
-        <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p>
       </div>
     );
   }
@@ -277,10 +277,10 @@ function PlayInner({ code }: { code: string }) {
     return (
       <div className="page-narrow" style={{ textAlign: "center", paddingTop: "4rem" }}>
         <p style={{ color: "var(--text-muted)" }}>
-          {byCode.error?.message ?? "No session with that code."}
+          {byCode.error?.message ?? t("live.error.noSession")}
         </p>
         <Link href="/live" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          ← Try another code
+          {t("live.play.cta.tryAnotherCode")}
         </Link>
       </div>
     );
@@ -293,20 +293,27 @@ function PlayInner({ code }: { code: string }) {
     <div className="page-narrow" style={{ maxWidth: 480 }}>
       <div style={{ marginBottom: "1.5rem" }}>
         <span style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)" }}>
-          {raffle ? "LUCKY DRAW · 摸彩" : preview.topic_title}
+          {raffle ? t("live.raffle.eyebrow") : preview.topic_title}
         </span>
         <h1 style={{ fontSize: "1.15rem", fontWeight: 700, lineHeight: 1.4, marginTop: "0.4rem" }}>
-          {raffle ? "Prize Draw" : session?.question || preview.question}
+          {raffle ? t("live.raffle.title") : session?.question || preview.question}
         </h1>
       </div>
 
       {preview.is_host && (
         <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginBottom: "1rem" }}>
-          You&apos;re the host —{" "}
-          <Link href={`/live/host/${code}`} style={{ color: "var(--accent)" }}>
-            open the host screen
-          </Link>{" "}
-          to run the room.
+          {(() => {
+            const [before, after] = t("live.play.host.banner").split("{link}");
+            return (
+              <>
+                {before}
+                <Link href={`/live/host/${code}`} style={{ color: "var(--accent)" }}>
+                  {t("live.play.host.bannerLink")}
+                </Link>
+                {after}
+              </>
+            );
+          })()}
         </p>
       )}
 
@@ -328,11 +335,11 @@ function PlayInner({ code }: { code: string }) {
         ) : spotlight.is_you && (spotlight.outcome === "shared" || spotlight.outcome === "passed") ? (
           <div style={{ textAlign: "center", padding: "1rem 1.25rem", border: "1px solid var(--border-light)", borderRadius: 12, background: "var(--bg-surface)", marginBottom: "1.5rem" }}>
             <p style={{ fontSize: "1rem", fontWeight: 700 }}>
-              {spotlight.outcome === "shared" ? "You're sharing 🎤" : "You passed — no worries."}
+              {spotlight.outcome === "shared" ? t("live.spotlight.you.sharing") : t("live.spotlight.you.passed")}
             </p>
             {spotlight.outcome === "shared" && (
               <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "0.3rem" }}>
-                {spotlight.note_shared ? "Your note is on the screen." : "Your note stays private to you."}
+                {spotlight.note_shared ? t("live.spotlight.you.noteOnScreen") : t("live.spotlight.you.notePrivate")}
               </p>
             )}
           </div>
@@ -354,7 +361,7 @@ function PlayInner({ code }: { code: string }) {
           {quizRound.status === "revealed" && !!quizLeaderboardQuery.data?.length && (
             <div style={{ marginTop: "1.25rem" }}>
               <h3 style={{ fontSize: "0.72rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-                Leaderboard
+                {t("live.quiz.leaderboard")}
               </h3>
               <QuizLeaderboard rows={quizLeaderboardQuery.data} meId={user?.id} />
             </div>
@@ -366,26 +373,26 @@ function PlayInner({ code }: { code: string }) {
       {(status === "lobby" || status === "voting") && !isMember && (
         join.isError ? (
           <div style={{ textAlign: "center", paddingTop: "1.5rem" }}>
-            <p className="auth-error">Couldn&apos;t join: {join.error.message}</p>
+            <p className="auth-error">{t("live.play.join.failed", { message: join.error.message })}</p>
             <button
               type="button"
               className="btn btn-primary"
               style={{ marginTop: "1rem" }}
               onClick={() => join.mutate({ sessionId: preview.id })}
             >
-              Try again
+              {t("live.play.cta.tryAgain")}
             </button>
           </div>
         ) : (
-          <p style={{ color: "var(--text-muted)" }}>Joining…</p>
+          <p style={{ color: "var(--text-muted)" }}>{t("live.play.status.joining")}</p>
         )
       )}
 
       {status === "lobby" && isMember && (
         <div style={{ textAlign: "center", paddingTop: "2rem" }}>
-          <p style={{ fontSize: "1.3rem", fontWeight: 700 }}>You&apos;re in.</p>
+          <p style={{ fontSize: "1.3rem", fontWeight: 700 }}>{t("live.play.lobby.youreIn")}</p>
           <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginTop: "0.5rem" }}>
-            Keep this page open — {raffle ? "the draw" : "voting"} starts when the host opens it.
+            {t("live.play.lobby.keepOpen", { what: raffle ? t("live.play.lobby.keepOpen.draw") : t("live.play.lobby.keepOpen.voting") })}
           </p>
           {consentToggle && <div style={{ marginTop: "1.5rem" }}>{consentToggle}</div>}
         </div>
@@ -395,14 +402,16 @@ function PlayInner({ code }: { code: string }) {
         <div>
           {voteSubmitted && !editingVote ? (
             <div style={{ textAlign: "center", paddingTop: "1.5rem" }}>
-              <p style={{ fontSize: "1.1rem", fontWeight: 700 }}>Vote recorded.</p>
+              <p style={{ fontSize: "1.1rem", fontWeight: 700 }}>{t("live.vote.recorded.title")}</p>
               <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)", marginTop: "0.4rem" }}>
-                You chose{" "}
-                <strong>{options.find((o) => o.id === selectedOption)?.label ?? "—"}</strong>.
-                Results appear when the host reveals them.
+                {(() => {
+                  const choice = options.find((o) => o.id === selectedOption)?.label ?? "—";
+                  const [before, after] = t("live.vote.recorded.body").split("{choice}");
+                  return <>{before}<strong>{choice}</strong>{after}</>;
+                })()}
               </p>
               <button type="button" className="btn" style={{ marginTop: "1.25rem" }} onClick={() => setEditingVote(true)}>
-                Change vote
+                {t("live.vote.cta.changeVote")}
               </button>
             </div>
           ) : (
@@ -421,7 +430,7 @@ function PlayInner({ code }: { code: string }) {
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="live-note">
-                  Why? <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(optional, {140 - note.length} left)</span>
+                  {t("live.vote.note.label")} <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>{t("live.vote.note.optionalHint", { n: 140 - note.length })}</span>
                 </label>
                 <textarea
                   id="live-note"
@@ -430,7 +439,7 @@ function PlayInner({ code }: { code: string }) {
                   onChange={(e) => setNote(e.target.value.slice(0, 140))}
                   rows={2}
                   maxLength={140}
-                  placeholder="One line on your reasoning…"
+                  placeholder={t("live.vote.note.placeholder")}
                 />
               </div>
               {vote.error && (
@@ -450,7 +459,7 @@ function PlayInner({ code }: { code: string }) {
                   })
                 }
               >
-                {vote.isPending ? "Submitting…" : voteSubmitted ? "Update vote" : "Submit vote"}
+                {vote.isPending ? t("live.vote.cta.submitting") : voteSubmitted ? t("live.vote.cta.update") : t("live.vote.cta.submit")}
               </button>
             </div>
           )}
@@ -460,15 +469,15 @@ function PlayInner({ code }: { code: string }) {
 
       {status === "voting" && preview.is_host && (
         <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
-          Voting is open — watch the tally on the host screen.
+          {t("live.play.host.votingOpen")}
         </p>
       )}
 
       {(status === "revealed" || status === "ended") && (
         <div>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>
-            {status === "revealed" ? "Results" : "Final results"}
-            {tally ? ` · ${tally.total} votes` : ""}
+            {status === "revealed" ? t("live.play.results.title") : t("live.play.results.titleFinal")}
+            {tally ? t("live.play.results.voteCount", { total: tally.total }) : ""}
           </h2>
           <TallyBars
             options={tally?.options ?? []}
@@ -477,20 +486,20 @@ function PlayInner({ code }: { code: string }) {
           />
           {status === "revealed" && !preview.is_host && (
             <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: "1.25rem" }}>
-              The host may reopen voting — keep this page open.
+              {t("live.play.revealed.keepOpen")}
             </p>
           )}
           {status === "ended" && (
             <div style={{ textAlign: "center", marginTop: "2rem" }}>
               <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
-                Session over — the conversation continues in the topic discussion.
+                {t("live.ended.body")}
               </p>
               <Link
                 href={`/topics/${preview.topic_slug}/discuss`}
                 className="btn btn-primary"
                 style={{ display: "inline-block", textDecoration: "none" }}
               >
-                Join the discussion →
+                {t("live.ended.cta.joinDiscussion")}
               </Link>
             </div>
           )}

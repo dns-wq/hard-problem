@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CurrentSpotlight } from "@/types/database";
+import { useT } from "@/i18n/LocaleProvider";
 
 interface SpotlightCalloutProps {
   spotlight: CurrentSpotlight; // is_you === true && outcome === 'pending' (caller-gated)
@@ -16,6 +17,7 @@ interface SpotlightCalloutProps {
 // it aloud verbatim; it only reaches the projector if they tick "show on screen"
 // (note_shared). Pass is always available — the consent safety valve.
 export default function SpotlightCallout({ spotlight, raffleMode, busy, errorMessage, onShare, onPass }: SpotlightCalloutProps) {
+  const t = useT();
   const [showNote, setShowNote] = useState(false);
   const hasNote = !!spotlight.drawn_note && !raffleMode;
 
@@ -30,9 +32,9 @@ export default function SpotlightCallout({ spotlight, raffleMode, busy, errorMes
         marginBottom: "1.5rem",
       }}
     >
-      <p style={{ fontSize: "1.4rem", fontWeight: 800 }}>{raffleMode ? "You won! 🎉" : "It's you."}</p>
+      <p style={{ fontSize: "1.4rem", fontWeight: 800 }}>{raffleMode ? t("live.spotlight.callout.title.won") : t("live.spotlight.callout.title.itsYou")}</p>
       <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginTop: "0.4rem" }}>
-        {raffleMode ? "Come up to collect — or pass." : "The host called on you. Share your reasoning aloud."}
+        {raffleMode ? t("live.spotlight.callout.body.raffle") : t("live.spotlight.callout.body.discussion")}
       </p>
 
       {hasNote && (
@@ -48,7 +50,7 @@ export default function SpotlightCallout({ spotlight, raffleMode, busy, errorMes
           }}
         >
           <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", display: "block", marginBottom: "0.25rem" }}>
-            Your note (only you can see this)
+            {t("live.spotlight.callout.noteLabel")}
           </span>
           “{spotlight.drawn_note}”
         </div>
@@ -68,7 +70,7 @@ export default function SpotlightCallout({ spotlight, raffleMode, busy, errorMes
           }}
         >
           <input type="checkbox" checked={showNote} onChange={(e) => setShowNote(e.target.checked)} />
-          Show my note on the big screen too
+          {t("live.spotlight.callout.showOnScreen")}
         </label>
       )}
 
@@ -76,10 +78,10 @@ export default function SpotlightCallout({ spotlight, raffleMode, busy, errorMes
 
       <div style={{ display: "flex", gap: "0.6rem", marginTop: "1.1rem" }}>
         <button type="button" className="btn btn-primary" style={{ flex: 1 }} disabled={busy} onClick={() => onShare(showNote)}>
-          {busy ? "…" : raffleMode ? "I'm here 🙌" : "Share aloud"}
+          {busy ? "…" : raffleMode ? t("live.spotlight.callout.cta.imHere") : t("live.spotlight.callout.cta.shareAloud")}
         </button>
         <button type="button" className="btn" style={{ flex: 1 }} disabled={busy} onClick={onPass}>
-          Pass
+          {t("live.spotlight.callout.cta.pass")}
         </button>
       </div>
     </div>
