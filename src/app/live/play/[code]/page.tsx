@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { createClient } from "@/lib/supabase/client";
 import { trpc } from "@/lib/trpc/client";
 import { useT } from "@/i18n/LocaleProvider";
@@ -16,6 +17,7 @@ import QuizLeaderboard from "@/components/live/QuizLeaderboard";
 import ReactionBar from "@/components/live/ReactionBar";
 import ReactionBurstLayer, { type ReactionBurst } from "@/components/live/ReactionBurstLayer";
 import type { ReactionKind } from "@/types/database";
+import RundownParticipant from "@/components/live/RundownParticipant";
 
 function PlayInner({ code }: { code: string }) {
   const t = useT();
@@ -29,6 +31,9 @@ function PlayInner({ code }: { code: string }) {
   const [guestName, setGuestName] = useState("");
   const [guestLoading, setGuestLoading] = useState(false);
   const [guestError, setGuestError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance | null>(null);
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   // Guest join: an anonymous Supabase session (no account). Setting `user`
   // re-renders → byCode runs → the auto-join effect fires, so the guest lands
@@ -39,12 +44,21 @@ function PlayInner({ code }: { code: string }) {
       setGuestError(t("live.guest.error.noName"));
       return;
     }
+    if (!turnstileSiteKey || !captchaToken) {
+      setGuestError(t("live.guest.error.captcha"));
+      return;
+    }
     setGuestLoading(true);
     setGuestError("");
     const { data, error } = await createClient().auth.signInAnonymously({
-      options: { data: { display_name: name.slice(0, 40) } },
+      options: {
+        data: { display_name: name.slice(0, 40) },
+        captchaToken,
+      },
     });
     if (error) {
+      turnstileRef.current?.reset();
+      setCaptchaToken(null);
       setGuestError(error.message);
       setGuestLoading(false);
       return;
@@ -258,8 +272,23 @@ function PlayInner({ code }: { code: string }) {
             autoComplete="off"
             autoFocus
           />
+          {turnstileSiteKey ? (
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={turnstileSiteKey}
+              onSuccess={setCaptchaToken}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => {
+                setCaptchaToken(null);
+                setGuestError(t("live.guest.error.captcha"));
+              }}
+              options={{ theme: "auto" }}
+            />
+          ) : (
+            <p className="auth-error">{t("live.guest.error.captchaUnavailable")}</p>
+          )}
           {guestError && <p className="auth-error">{guestError}</p>}
-          <button className="auth-submit" type="submit" disabled={guestLoading || !guestName.trim()}>
+          <button className="auth-submit" type="submit" disabled={guestLoading || !guestName.trim() || !captchaToken}>
             {guestLoading ? t("live.guest.cta.loading") : t("live.guest.cta")}
           </button>
         </form>
@@ -284,6 +313,10 @@ function PlayInner({ code }: { code: string }) {
         </Link>
       </div>
     );
+  }
+
+  if (session?.format_version === 2) {
+    return <RundownParticipant sessionId={session.id} topicTitle={preview.topic_title} ended={session.status === "ended"} />;
   }
 
   const options = sessionQuery.data?.options ?? [];

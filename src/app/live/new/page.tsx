@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { useLocale } from "@/i18n/LocaleProvider";
+import RundownEditor from "@/components/live/RundownEditor";
 
 interface OptionDraft {
   label: string;
@@ -33,6 +34,7 @@ function NewSessionForm() {
     { topicId: topic?.id ?? "" },
     { enabled: !!topic?.id },
   );
+  const rundownEnabled = trpc.live.rundownEnabled.useQuery();
 
   // Prefill the question with the topic's discussion prompt (host-editable)
   useEffect(() => {
@@ -115,6 +117,18 @@ function NewSessionForm() {
         <Link href="/topics" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
           {t("nav.allTopics")}
         </Link>
+      </div>
+    );
+  }
+
+  if (rundownEnabled.data && !raffleMode) {
+    return (
+      <div>
+        <label className="page-narrow" style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem", fontSize: "0.88rem", color: "var(--text-secondary)", cursor: "pointer" }}>
+          <input type="checkbox" checked={raffleMode} onChange={(e) => setRaffleMode(e.target.checked)} />
+          {t("live.new.raffle.toggleLabel")}
+        </label>
+        <RundownEditor topic={topic} stanceTags={stanceTags ?? []} />
       </div>
     );
   }

@@ -106,6 +106,11 @@ export function useHostSessionChannel(
       )
       .on(
         "postgres_changes",
+        { event: "*", schema: "public", table: "live_block_runs", filter: `session_id=eq.${sessionId}` },
+        bump,
+      )
+      .on(
+        "postgres_changes",
         { event: "INSERT", schema: "public", table: "live_participants", filter: `session_id=eq.${sessionId}` },
         bump,
       )

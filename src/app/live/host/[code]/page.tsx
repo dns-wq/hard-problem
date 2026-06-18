@@ -21,6 +21,7 @@ import QuizPushPicker from "@/components/live/QuizPushPicker";
 import QuizLeaderboard from "@/components/live/QuizLeaderboard";
 import ReactionBurstLayer, { type ReactionBurst } from "@/components/live/ReactionBurstLayer";
 import type { SpotlightMode, ReactionKind } from "@/types/database";
+import RundownHost from "@/components/live/RundownHost";
 
 type HostAction = "revealed" | "voting" | "ended";
 // Confirm-dialog copy is resolved at render via t(`live.confirm.${action}.*`).
@@ -245,6 +246,9 @@ export default function HostSessionPage() {
   if (!isHost) return null; // redirecting to the play view
 
   const participantCount = sessionQuery.data?.participantCount ?? 0;
+  if (session?.format_version === 2) {
+    return <RundownHost sessionId={session.id} code={code} topicId={preview.topic_id} topicTitle={preview.topic_title} participantCount={participantCount} ended={session.status === "ended"} />;
+  }
   const tally = tallyQuery.data;
   // Carry the host's language into the QR so attendees land in the same locale
   // on first paint (LocaleProvider adopts ?lang= on mount and persists it).

@@ -5,6 +5,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/server";
 import { LIVE_CODE_ALPHABET, LIVE_CODE_REGEX } from "@/lib/liveCode";
 import { overlayOne } from "@/lib/i18n/contentOverlay";
+import { logLiveEvent } from "@/lib/structuredLog";
 import type {
   CurrentSpotlight,
   DrawResult,
@@ -12,6 +13,11 @@ import type {
   CurrentQuizRound,
   QuizAggregateRow,
   QuizLeaderboardRow,
+  CurrentLiveBlock,
+  LiveBlockAggregate,
+  LiveBlockRun,
+  LiveBlockLeaderboardRow,
+  LiveSessionBlock,
 } from "@/types/database";
 
 // Live Sessions (Sprint 1) — see docs/sprint-1-live-sessions.md.
@@ -27,6 +33,53 @@ const TRANSITIONS: Record<string, string[]> = {
 
 // Spotlight draw modes (Sprint 2) — mirror the live_spotlight_draws CHECK
 const SPOTLIGHT_MODES = ["uniform", "no_repeat", "minority_weighted", "minority_steelman"] as const;
+const BLOCK_KINDS = ["text", "video", "choice", "open_text", "word_cloud", "scale", "ranking", "quiz"] as const;
+const SHARE_SCOPES = ["private", "anonymous", "named"] as const;
+const blockDraftSchema = z.object({
+  kind: z.enum(BLOCK_KINDS),
+  title: z.string().max(120).default(""),
+  prompt: z.string().max(500).default(""),
+  config: z.record(z.string(), z.unknown()).default({}),
+  content: z.record(z.string(), z.unknown()).default({}),
+  sourceType: z.enum(["custom", "topic_prompt", "topic_anchor", "paper_excerpt", "topic_video", "quiz_bank"]).nullable().optional(),
+  sourceId: z.string().max(200).nullable().optional(),
+  comparisonGroupId: z.string().uuid().nullable().optional(),
+  skipped: z.boolean().optional(),
+}).superRefine((block, ctx) => {
+  const config = block.config;
+  const options = Array.isArray(config.options) ? config.options as Array<{ id?: unknown; label?: unknown }> : [];
+  const issue = (message: string, path: (string | number)[] = ["config"]) => ctx.addIssue({ code: "custom", message, path });
+  if (block.kind === "text" && (typeof block.content.body !== "string" || block.content.body.trim().length === 0)) issue("Text blocks need content.", ["content", "body"]);
+  if (block.kind === "video" && (typeof block.content.youtube_id !== "string" || !/^[A-Za-z0-9_-]{6,32}$/.test(block.content.youtube_id))) issue("Select a valid topic video.", ["content", "youtube_id"]);
+  if (["choice", "ranking"].includes(block.kind)) {
+    if (options.length < 2 || options.length > 8) issue("Use between 2 and 8 options.");
+    if (options.some((o) => typeof o.id !== "string" || typeof o.label !== "string" || !o.label.trim())) issue("Every option needs an id and label.");
+    if (new Set(options.map((o) => o.id)).size !== options.length) issue("Option ids must be unique.");
+  }
+  if (block.kind === "choice") {
+    const max = Number(config.max_selections ?? 1);
+    if (!Number.isInteger(max) || max < 1 || max > options.length) issue("Maximum selections is outside the option range.");
+  }
+  if (block.kind === "ranking") {
+    const count = Number(config.required_count ?? options.length);
+    if (!Number.isInteger(count) || count < 1 || count > options.length) issue("Required rank count is outside the option range.");
+  }
+  if (block.kind === "scale") {
+    const min = Number(config.min ?? 1); const max = Number(config.max ?? 5);
+    if (!Number.isInteger(min) || !Number.isInteger(max) || min >= max || max - min + 1 > 10) issue("Scale must contain 2 to 10 integer points.");
+  }
+  if (block.kind === "open_text" && (Number(config.max_length) < 1 || Number(config.max_length) > 500)) issue("Open text length must be between 1 and 500.");
+  if (block.kind === "word_cloud" && (Number(config.max_entries) < 1 || Number(config.max_entries) > 3 || Number(config.max_entry_length) < 1 || Number(config.max_entry_length) > 40)) issue("Word cloud limits are invalid.");
+  if (block.kind === "quiz") {
+    const questionType = config.question_type;
+    const correct = config.correct_answer;
+    if (!block.prompt.trim()) issue("Quiz blocks need a question.", ["prompt"]);
+    if (questionType === "true_false" && !["true", "false"].includes(String(correct).toLowerCase())) issue("Choose the correct true/false answer.");
+    if (questionType === "mcq" && (options.length < 2 || !options.some((o) => o.id === correct))) issue("Choose a correct answer from the quiz options.");
+    const seconds = Number(config.answer_window_sec ?? 20);
+    if (!Number.isInteger(seconds) || seconds < 5 || seconds > 600) issue("Quiz timer must be between 5 and 600 seconds.");
+  }
+});
 
 function generateCode(): string {
   let code = "";
@@ -34,6 +87,14 @@ function generateCode(): string {
     code += LIVE_CODE_ALPHABET[randomInt(LIVE_CODE_ALPHABET.length)];
   }
   return code;
+}
+
+type RundownCreationMode = "off" | "internal" | "all";
+function rundownCreationMode(): RundownCreationMode {
+  const configured = process.env.LIVE_RUNDOWN_V2_CREATION;
+  if (configured === "off" || configured === "internal" || configured === "all") return configured;
+  // Temporary compatibility for environments that still carry the draft flag.
+  return process.env.LIVE_RUNDOWN_V2_ENABLED === "true" ? "internal" : "off";
 }
 
 // RAISE EXCEPTION messages from the 005 RPCs arrive as PostgrestError.message
@@ -70,6 +131,7 @@ export const liveRouter = createTRPCRouter({
         raffleMode: z.boolean().optional(),
         startsAt: z.string().datetime().optional(),
         publish: z.boolean().optional(),
+        blocks: z.array(blockDraftSchema).max(50).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -86,7 +148,11 @@ export const liveRouter = createTRPCRouter({
 
       // Raffle sessions (the tender skin) carry no vote options; everything else needs ≥2
       const isRaffle = input.raffleMode ?? false;
-      if (!isRaffle && input.options.length < 2) {
+      const creationMode = rundownCreationMode();
+      const { data: creator } = await ctx.supabase.from("users").select("role").eq("id", ctx.user.id).single();
+      const eligibleForRundown = creationMode === "all" || (creationMode === "internal" && ["editor", "admin"].includes(creator?.role ?? "user"));
+      const useRundown = eligibleForRundown && !isRaffle;
+      if (!useRundown && !isRaffle && input.options.length < 2) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "A stance vote needs at least 2 options." });
       }
 
@@ -95,28 +161,60 @@ export const liveRouter = createTRPCRouter({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Vote options must be distinct." });
       }
 
-      // Insert with collision retry on the unique code (23505)
+      const seedBlocks: z.infer<typeof blockDraftSchema>[] = input.blocks?.length
+        ? input.blocks
+        : [{
+            kind: "choice" as const,
+            title: "",
+            prompt: input.question?.trim() || topic.discussion_prompt || "",
+            config: {
+              options: input.options.map((o, i) => ({ id: `option-${i + 1}`, label: o.label.trim() })),
+              max_selections: 1,
+              allow_note: true,
+              audience_results: "on_reveal",
+            },
+            content: {},
+            sourceType: "topic_prompt" as const,
+            sourceId: input.topicId,
+          }];
+
+      // Version 2 creates the session and rundown in one transaction. Legacy
+      // and raffle creation retain the existing direct-insert path.
       let session: { id: string; code: string } | null = null;
       for (let attempt = 0; attempt < 3 && !session; attempt++) {
-        const { data, error } = await ctx.supabase
-          .from("live_sessions")
-          .insert({
-            code: generateCode(),
-            topic_id: input.topicId,
-            host_id: ctx.user.id,
-            question: input.question?.trim() || topic.discussion_prompt || "",
-            raffle_mode: isRaffle,
-          })
-          .select("id, code")
-          .single();
+        const code = generateCode();
+        const result = useRundown
+          ? await ctx.supabase.rpc("create_live_rundown_session", {
+              p_code: code,
+              p_topic_id: input.topicId,
+              p_question: input.question?.trim() || topic.discussion_prompt || "",
+              p_blocks: seedBlocks.map((b) => ({
+                kind: b.kind, title: b.title ?? "", prompt: b.prompt ?? "", config: b.config ?? {}, content: b.content ?? {},
+                source_type: b.sourceType ?? null, source_id: b.sourceId ?? null,
+                comparison_group_id: b.comparisonGroupId ?? null, skipped: b.skipped ?? false,
+              })),
+              p_starts_at: input.startsAt ?? null,
+              p_published: input.publish ?? true,
+            })
+          : await ctx.supabase.from("live_sessions").insert({
+              code,
+              topic_id: input.topicId,
+              host_id: ctx.user.id,
+              question: input.question?.trim() || topic.discussion_prompt || "",
+              raffle_mode: isRaffle,
+            }).select("id, code");
+        const { data, error } = result;
         if (error && error.code !== "23505") throw error;
-        if (data) session = data;
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row) session = useRundown
+          ? { id: (row as { session_id: string }).session_id, code: (row as { session_code: string }).session_code }
+          : row as { id: string; code: string };
       }
       if (!session) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not allocate a session code." });
       }
 
-      if (input.options.length > 0) {
+      if (!useRundown && input.options.length > 0) {
         const { error: optionsError } = await ctx.supabase.from("live_session_options").insert(
           input.options.map((o, i) => ({
             session_id: session.id,
@@ -137,7 +235,7 @@ export const liveRouter = createTRPCRouter({
       }
 
       // Optional: schedule + publish in the same step (definer RPC owns the pinned columns)
-      if (input.startsAt) {
+      if (input.startsAt && !useRundown) {
         await ctx.supabase.rpc("schedule_live_session", {
           p_session_id: session.id,
           p_starts_at: input.startsAt,
@@ -145,7 +243,179 @@ export const liveRouter = createTRPCRouter({
         });
       }
 
+      if (useRundown) logLiveEvent("rundown.created", { session_id: session.id, block_count: seedBlocks.length, scheduled: !!input.startsAt });
+
       return session;
+    }),
+
+  rundownEnabled: protectedProcedure.query(async ({ ctx }) => {
+    const mode = rundownCreationMode();
+    if (mode === "all") return true;
+    if (mode === "off") return false;
+    const { data } = await ctx.supabase.from("users").select("role").eq("id", ctx.user.id).single();
+    return ["editor", "admin"].includes(data?.role ?? "user");
+  }),
+
+  blockSources: protectedProcedure
+    .input(z.object({ topicId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const [{ data: topic, error: topicError }, { data: papers, error: paperError }, { data: quizzes, error: quizError }] = await Promise.all([
+        ctx.supabase.from("topics").select("id, framing_note, discussion_prompt, real_world_anchor, videos").eq("id", input.topicId).single(),
+        ctx.supabase.from("papers").select("id, title, abstract, role").eq("topic_id", input.topicId).order("display_order"),
+        ctx.supabase.from("quiz_questions").select("id, question_text, question_type, options, correct_answer, explanation").eq("topic_id", input.topicId).order("display_order"),
+      ]);
+      if (topicError) throw topicError;
+      if (paperError) throw paperError;
+      if (quizError) throw quizError;
+      return { topic, papers: papers ?? [], quizzes: quizzes ?? [] };
+    }),
+
+  rundown: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_live_rundown", { p_session_id: input.sessionId });
+      if (error) throw error;
+      const value = (data ?? { blocks: [], runs: [] }) as { blocks: LiveSessionBlock[]; runs: LiveBlockRun[] };
+      return value;
+    }),
+
+  replaceRundown: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), blocks: z.array(blockDraftSchema).max(50) }))
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("replace_live_rundown", {
+        p_session_id: input.sessionId,
+        p_blocks: input.blocks.map((b) => ({
+          kind: b.kind, title: b.title, prompt: b.prompt, config: b.config, content: b.content,
+          source_type: b.sourceType ?? null, source_id: b.sourceId ?? null,
+          comparison_group_id: b.comparisonGroupId ?? null, skipped: b.skipped ?? false,
+        })),
+      });
+      if (error) throw error;
+      return (data ?? []) as LiveSessionBlock[];
+    }),
+
+  activateBlock: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), blockId: z.string().uuid(), rerun: z.boolean().optional(), requestId: z.string().uuid().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("activate_live_block_v2", {
+        p_session_id: input.sessionId, p_block_id: input.blockId, p_rerun: input.rerun ?? false,
+        p_request_id: input.requestId ?? crypto.randomUUID(),
+      });
+      if (error) throw error;
+      logLiveEvent("rundown.block_activated", { session_id: input.sessionId, block_id: input.blockId, rerun: input.rerun ?? false });
+      return { runId: data as string };
+    }),
+
+  skipBlock: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), blockId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("skip_live_block", { p_session_id: input.sessionId, p_block_id: input.blockId });
+      if (error) throw error;
+    }),
+
+  endRundown: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("end_live_rundown_session", { p_session_id: input.sessionId });
+      if (error) throw error;
+      logLiveEvent("rundown.session_ended", { session_id: input.sessionId });
+    }),
+
+  revisitBlock: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), runId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("set_current_live_block_run", { p_session_id: input.sessionId, p_run_id: input.runId });
+      if (error) throw error;
+    }),
+
+  closeBlock: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), runId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("close_live_block", { p_session_id: input.sessionId, p_run_id: input.runId });
+      if (error) throw error;
+      logLiveEvent("rundown.block_closed", { session_id: input.sessionId, run_id: input.runId });
+    }),
+
+  revealBlock: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid(), runId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("reveal_live_block", { p_session_id: input.sessionId, p_run_id: input.runId });
+      if (error) throw error;
+      logLiveEvent("rundown.block_revealed", { session_id: input.sessionId, run_id: input.runId });
+    }),
+
+  currentBlock: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_current_live_block", { p_session_id: input.sessionId });
+      if (error) throw error;
+      return (data ?? null) as CurrentLiveBlock | null;
+    }),
+
+  blockAggregate: protectedProcedure
+    .input(z.object({ runId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_live_block_aggregate", { p_run_id: input.runId });
+      if (error) throw error;
+      return data as LiveBlockAggregate;
+    }),
+
+  blockLeaderboard: protectedProcedure
+    .input(z.object({ sessionId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_live_quiz_leaderboard_v2", { p_session_id: input.sessionId });
+      if (error) throw error;
+      return (data ?? []).map((row: Record<string, unknown>) => ({ ...row, total_score: Number(row.total_score), correct_count: Number(row.correct_count) })) as LiveBlockLeaderboardRow[];
+    }),
+
+  shareCandidates: protectedProcedure
+    .input(z.object({ runId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_live_share_candidates", { p_run_id: input.runId });
+      if (error) throw error;
+      return data ?? [];
+    }),
+
+  submitBlockResponse: protectedProcedure
+    .input(z.object({
+      runId: z.string().uuid(), answer: z.record(z.string(), z.unknown()),
+      text: z.string().max(500).nullable().optional(), shareScope: z.enum(SHARE_SCOPES).default("private"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("submit_live_block_response", {
+        p_run_id: input.runId, p_answer: input.answer, p_text: input.text ?? null, p_share_scope: input.shareScope,
+      });
+      if (error) throw error;
+      logLiveEvent("rundown.response_submitted", { run_id: input.runId, has_text: !!input.text, share_scope: input.shareScope });
+      return { responseId: data as string };
+    }),
+
+  setBlockResponseShareScope: protectedProcedure
+    .input(z.object({ responseId: z.string().uuid(), shareScope: z.enum(SHARE_SCOPES) }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("set_live_response_share_scope", {
+        p_response_id: input.responseId, p_share_scope: input.shareScope,
+      });
+      if (error) throw error;
+      logLiveEvent("rundown.consent_changed", { response_id: input.responseId, share_scope: input.shareScope });
+    }),
+
+  publishBlockResponse: protectedProcedure
+    .input(z.object({ responseId: z.string().uuid(), displayOrder: z.number().int().min(0).default(0) }))
+    .mutation(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("publish_live_response", {
+        p_response_id: input.responseId, p_display_order: input.displayOrder,
+      });
+      if (error) throw error;
+      logLiveEvent("rundown.publication_changed", { response_id: input.responseId, active: true });
+      return { publicationId: data as string };
+    }),
+
+  removeBlockPublication: protectedProcedure
+    .input(z.object({ publicationId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { error } = await ctx.supabase.rpc("remove_live_response_publication", { p_publication_id: input.publicationId });
+      if (error) throw error;
     }),
 
   // Resolve a code to a session preview — pre-join only; rate-limited for non-members (protected)
@@ -375,7 +645,9 @@ export const liveRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { data, error } = await ctx.supabase.rpc("draw_spotlight", {
+      const { data: session } = await ctx.supabase.from("live_sessions").select("format_version").eq("id", input.sessionId).single();
+      const rpcName = session?.format_version === 2 ? "draw_block_spotlight" : "draw_spotlight";
+      const { data, error } = await ctx.supabase.rpc(rpcName, {
         p_session_id: input.sessionId,
         p_mode: input.mode,
         p_exclude_user_id: input.excludeUserId ?? null,
@@ -450,6 +722,28 @@ export const liveRouter = createTRPCRouter({
   shareDraw: protectedProcedure
     .input(z.object({ drawId: z.string().uuid(), shareNote: z.boolean().optional() }))
     .mutation(async ({ ctx, input }) => {
+      if (input.shareNote) {
+        const { data: draw } = await ctx.supabase
+          .from("live_spotlight_draws")
+          .select("block_run_id")
+          .eq("id", input.drawId)
+          .maybeSingle();
+        if (draw?.block_run_id) {
+          const { data: response } = await ctx.supabase
+            .from("live_block_responses")
+            .select("id")
+            .eq("run_id", draw.block_run_id)
+            .eq("user_id", ctx.user.id)
+            .maybeSingle();
+          if (response) {
+            const { error: scopeError } = await ctx.supabase.rpc("set_live_response_share_scope", {
+              p_response_id: response.id,
+              p_share_scope: "named",
+            });
+            if (scopeError) throw scopeError;
+          }
+        }
+      }
       const { data, error } = await ctx.supabase
         .from("live_spotlight_draws")
         .update({ outcome: "shared", note_shared: input.shareNote ?? false, resolved_at: new Date().toISOString() })

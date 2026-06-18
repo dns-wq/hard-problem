@@ -222,6 +222,148 @@ export interface LiveSession {
   starts_at: string | null;
   published: boolean;
   reminders_sent_at: string | null;
+  // 012_live_rundown.sql
+  format_version: 1 | 2;
+  current_block_run_id: string | null;
+}
+
+// ===== Live Rundown (012_live_rundown.sql) =====
+
+export type LiveBlockKind = "text" | "video" | "choice" | "open_text" | "word_cloud" | "scale" | "ranking" | "quiz";
+export type LiveBlockRunStatus = "active" | "closed" | "revealed";
+export type LiveResponseShareScope = "private" | "anonymous" | "named";
+export type LiveAudienceResults = "on_reveal" | "live" | "never";
+
+export interface LiveBlockOption {
+  id: string;
+  label: string;
+}
+
+export interface LiveBlockConfig extends Record<string, unknown> {
+  audience_results?: LiveAudienceResults;
+  options?: LiveBlockOption[];
+  max_selections?: number;
+  allow_note?: boolean;
+  max_length?: number;
+  max_entries?: number;
+  max_entry_length?: number;
+  min?: number;
+  max?: number;
+  min_label?: string;
+  max_label?: string;
+  required_count?: number;
+  question_type?: "mcq" | "true_false";
+  correct_answer?: string;
+  explanation?: string;
+  answer_window_sec?: number;
+  leaderboard?: boolean;
+}
+export interface LiveBlockContent extends Record<string, unknown> { body?: string; youtube_id?: string; context?: string; speaker?: string; source_url?: string }
+
+export interface LiveSessionBlock {
+  id: string;
+  session_id: string;
+  position: number;
+  kind: LiveBlockKind;
+  title: string;
+  prompt: string;
+  config: LiveBlockConfig;
+  content: LiveBlockContent;
+  source_type: string | null;
+  source_id: string | null;
+  comparison_group_id: string | null;
+  activated_at: string | null;
+  skipped_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LiveBlockRun {
+  id: string;
+  session_id: string;
+  block_id: string;
+  run_number: number;
+  status: LiveBlockRunStatus;
+  block_snapshot: LiveBlockSnapshot;
+  response_count: number;
+  accepting_until: string | null;
+  activation_request_id: string | null;
+  started_at: string;
+  closed_at: string | null;
+  revealed_at: string | null;
+}
+
+export interface LiveBlockSnapshot {
+  kind: LiveBlockKind;
+  title: string;
+  prompt: string;
+  config: LiveBlockConfig;
+  content: LiveBlockContent;
+  source_type: string | null;
+  source_id: string | null;
+  comparison_group_id: string | null;
+  position: number;
+}
+
+export interface LiveBlockResponse {
+  id: string;
+  session_id: string;
+  run_id: string;
+  user_id: string;
+  answer: Record<string, unknown>;
+  text_response: string | null;
+  share_scope: LiveResponseShareScope;
+  display_name_snapshot: string | null;
+  is_correct: boolean | null;
+  score: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LiveBlockPublication {
+  publication_id: string;
+  response_id: string;
+  answer: Record<string, unknown>;
+  text: string | null;
+  share_scope: Exclude<LiveResponseShareScope, "private">;
+  display_name: string | null;
+}
+
+export interface CurrentLiveBlock {
+  run_id: string;
+  block_id: string;
+  run_number: number;
+  status: LiveBlockRunStatus;
+  response_count: number;
+  started_at: string;
+  accepting_until: string | null;
+  snapshot: LiveBlockSnapshot;
+  my_response: LiveBlockResponse | null;
+  publications: LiveBlockPublication[];
+}
+
+export interface LiveBlockAggregateItem {
+  id: string;
+  label: string;
+  count?: number;
+  points?: number;
+}
+
+export interface LiveBlockAggregate {
+  kind: LiveBlockKind;
+  total: number;
+  items?: LiveBlockAggregateItem[];
+  correct_answer?: string | null;
+  explanation?: string | null;
+  median?: number | null;
+  comparison?: Pick<LiveBlockAggregate, "kind" | "total" | "items"> | null;
+}
+
+export interface LiveBlockLeaderboardRow {
+  user_id: string;
+  display_name: string;
+  total_score: number;
+  correct_count: number;
 }
 
 export interface LiveSessionOption {
