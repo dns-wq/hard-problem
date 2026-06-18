@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 import BuildOnModal from "./BuildOnModal";
 
 const REACTION_LABELS: Record<string, { label: string; emoji: string }> = {
@@ -11,17 +12,25 @@ const REACTION_LABELS: Record<string, { label: string; emoji: string }> = {
   thumbs_up: { label: "👍", emoji: "👍" },
 };
 
+// Maps a reaction type to its i18n key suffix; thumbs_up has no label key (its
+// label is the emoji itself), so it falls back to the static REACTION_LABELS value.
+const REACTION_LABEL_KEYS: Record<string, string> = {
+  great_point: "discuss.reaction.greatPoint",
+  interesting: "discuss.reaction.interesting",
+  i_disagree: "discuss.reaction.iDisagree",
+};
+
 const REACTION_PRESETS = ["great_point", "interesting", "i_disagree", "thumbs_up"] as const;
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: ReturnType<typeof useT>): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("discuss.time.justNow");
+  if (mins < 60) return t("discuss.time.minutesAgo", { mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t("discuss.time.hoursAgo", { hrs });
   const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return t("discuss.time.daysAgo", { days });
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
@@ -60,6 +69,7 @@ export default function ContributionCard({
   currentUserId,
   onMutated,
 }: ContributionCardProps) {
+  const t = useT();
   const [buildOnOpen, setBuildOnOpen] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -93,10 +103,10 @@ export default function ContributionCard({
         {/* Header */}
         <div className="contribution-header">
           <span className="contribution-author">
-            {author?.display_name ?? "Anonymous"}
+            {author?.display_name ?? t("discuss.author.anonymous")}
           </span>
           <span>·</span>
-          <span>{timeAgo(created_at)}</span>
+          <span>{timeAgo(created_at, t)}</span>
           {stance_tag && (
             <>
               <span>·</span>
@@ -119,7 +129,7 @@ export default function ContributionCard({
               className="form-input"
               value={editStance}
               onChange={(e) => setEditStance(e.target.value)}
-              placeholder="Stance tag (optional)"
+              placeholder={t("discuss.editor.stancePlaceholder")}
               style={{ marginBottom: "0.5rem", fontSize: "0.85rem" }}
             />
             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -130,10 +140,10 @@ export default function ContributionCard({
                 disabled={updateC.isPending}
                 onClick={() => updateC.mutate({ id, body: editBody, stance_tag: editStance || null })}
               >
-                {updateC.isPending ? "Saving…" : "Save"}
+                {updateC.isPending ? t("discuss.cta.saving") : t("discuss.cta.save")}
               </button>
               <button type="button" className="btn" style={{ fontSize: "0.8rem" }} onClick={() => setEditing(false)}>
-                Cancel
+                {t("common.cancel")}
               </button>
             </div>
           </div>
@@ -172,7 +182,7 @@ export default function ContributionCard({
                   className="contribution-action-btn"
                   onClick={() => setBuildOnOpen(true)}
                 >
-                  Build on →
+                  {t("discuss.cta.buildOn")}
                 </button>
                 {!hasAlreadyReacted && (
                   <button
@@ -180,16 +190,16 @@ export default function ContributionCard({
                     className="contribution-action-btn"
                     onClick={() => setShowReactions((v) => !v)}
                   >
-                    React
+                    {t("discuss.cta.react")}
                   </button>
                 )}
                 <button
                   type="button"
                   className="contribution-action-btn"
                   onClick={() => flagC.mutate({ id })}
-                  title="Flag for moderation"
+                  title={t("discuss.flag.title")}
                 >
-                  Flag
+                  {t("discuss.cta.flag")}
                 </button>
               </>
             )}
@@ -200,15 +210,15 @@ export default function ContributionCard({
                   className="contribution-action-btn"
                   onClick={() => setEditing(true)}
                 >
-                  Edit
+                  {t("discuss.cta.edit")}
                 </button>
                 <button
                   type="button"
                   className="contribution-action-btn"
-                  style={{ color: "#c44" }}
-                  onClick={() => { if (confirm("Delete this contribution?")) deleteC.mutate({ id }); }}
+                  style={{ color: "var(--danger)" }}
+                  onClick={() => { if (confirm(t("discuss.delete.confirm"))) deleteC.mutate({ id }); }}
                 >
-                  Delete
+                  {t("discuss.cta.delete")}
                 </button>
               </>
             )}
@@ -242,7 +252,7 @@ export default function ContributionCard({
                   setShowReactions(false);
                 }}
               >
-                {REACTION_LABELS[type]?.emoji} {REACTION_LABELS[type]?.label}
+                {REACTION_LABELS[type]?.emoji} {REACTION_LABEL_KEYS[type] ? t(REACTION_LABEL_KEYS[type]) : REACTION_LABELS[type]?.label}
               </button>
             ))}
           </div>
@@ -260,12 +270,12 @@ export default function ContributionCard({
             >
               <div className="contribution-header">
                 <span className="contribution-author">
-                  {bo.actor?.display_name ?? "Anonymous"}
+                  {bo.actor?.display_name ?? t("discuss.author.anonymous")}
                 </span>
                 <span>·</span>
-                <span>{timeAgo(bo.created_at)}</span>
+                <span>{timeAgo(bo.created_at, t)}</span>
                 <span style={{ fontSize: "0.68rem", color: "var(--accent)", marginLeft: "0.25rem" }}>
-                  builds on
+                  {t("discuss.relationship.buildsOn")}
                 </span>
               </div>
               <p className="contribution-body">{bo.body}</p>
@@ -278,7 +288,7 @@ export default function ContributionCard({
         <BuildOnModal
           topicId={topicId}
           parentId={id}
-          parentAuthor={author?.display_name ?? "Anonymous"}
+          parentAuthor={author?.display_name ?? t("discuss.author.anonymous")}
           parentBody={body}
           onClose={() => setBuildOnOpen(false)}
           onSuccess={onMutated}

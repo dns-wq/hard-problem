@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 import QuizGate from "./QuizGate";
 import AIChatInterface from "./AIChatInterface";
 
@@ -12,6 +13,7 @@ interface AIPanelProps {
 }
 
 export default function AIPanel({ topicId, currentUserId }: AIPanelProps) {
+  const t = useT();
   const [quizPassed, setQuizPassed] = useState<boolean | null>(null);
 
   const { data: access, isLoading } = trpc.ai.checkAccess.useQuery(
@@ -29,10 +31,10 @@ export default function AIPanel({ topicId, currentUserId }: AIPanelProps) {
     return (
       <div className="ai-panel" style={{ justifyContent: "center", alignItems: "center", padding: "1.5rem", textAlign: "center" }}>
         <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "1rem" }}>
-          Sign in to access AI Q&A, powered by Claude.
+          {t("ai.signedOut.prompt")}
         </p>
         <Link href="/auth/login" className="btn btn-primary" style={{ textDecoration: "none", fontSize: "0.85rem" }}>
-          Sign in
+          {t("nav.signIn")}
         </Link>
       </div>
     );
@@ -41,7 +43,7 @@ export default function AIPanel({ topicId, currentUserId }: AIPanelProps) {
   if (isLoading) {
     return (
       <div className="ai-panel" style={{ justifyContent: "center", alignItems: "center" }}>
-        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading…</p>
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>{t("common.loading")}</p>
       </div>
     );
   }
@@ -51,12 +53,12 @@ export default function AIPanel({ topicId, currentUserId }: AIPanelProps) {
     return (
       <div className="ai-panel" style={{ justifyContent: "center", alignItems: "center", padding: "1.5rem", textAlign: "center" }}>
         <div>
-          <p style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>AI Q&A is a Pro feature</p>
+          <p style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.4rem" }}>{t("ai.pro.title")}</p>
           <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "1rem" }}>
-            Upgrade to Pro to ask Claude questions grounded in this topic's papers.
+            {t("ai.pro.body")}
           </p>
           <Link href="/upgrade" className="btn btn-primary" style={{ textDecoration: "none", fontSize: "0.85rem" }}>
-            Upgrade to Pro
+            {t("ai.pro.cta")}
           </Link>
         </div>
       </div>
@@ -68,9 +70,9 @@ export default function AIPanel({ topicId, currentUserId }: AIPanelProps) {
   return (
     <div className="ai-panel">
       <div className="ai-panel-header">
-        <p className="ai-panel-title">AI Q&A</p>
+        <p className="ai-panel-title">{t("ai.panel.title")}</p>
         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.1rem" }}>
-          {effectiveQuizPassed ? "Grounded in topic papers" : "Complete the quiz to unlock"}
+          {effectiveQuizPassed ? t("ai.panel.subtitleGrounded") : t("ai.panel.subtitleLocked")}
         </p>
       </div>
 

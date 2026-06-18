@@ -1,10 +1,12 @@
 "use client";
 
+import { useT } from "@/i18n/LocaleProvider";
+
 const DIFFICULTIES = [
-  { value: "", label: "All levels" },
-  { value: "accessible", label: "Accessible" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
+  { value: "", labelKey: "topic.difficulty.all" },
+  { value: "accessible", labelKey: "topic.difficulty.accessible" },
+  { value: "intermediate", labelKey: "topic.difficulty.intermediate" },
+  { value: "advanced", labelKey: "topic.difficulty.advanced" },
 ];
 
 interface FilterBarProps {
@@ -15,13 +17,14 @@ interface FilterBarProps {
 }
 
 export default function FilterBar({ search, difficulty, onSearchChange, onDifficultyChange }: FilterBarProps) {
+  const t = useT();
   return (
     <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
       <input
         type="search"
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
-        placeholder="Search topics…"
+        placeholder={t("topics.filter.searchPlaceholder")}
         style={{
           flex: "1 1 200px",
           fontSize: "0.875rem",
@@ -35,7 +38,7 @@ export default function FilterBar({ search, difficulty, onSearchChange, onDiffic
         }}
       />
       <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-        {DIFFICULTIES.map(({ value, label }) => (
+        {DIFFICULTIES.map(({ value, labelKey }) => (
           <button
             key={value}
             type="button"
@@ -53,7 +56,7 @@ export default function FilterBar({ search, difficulty, onSearchChange, onDiffic
               transition: "all 0.15s",
             }}
           >
-            {label}
+            {t(labelKey)}
           </button>
         ))}
       </div>

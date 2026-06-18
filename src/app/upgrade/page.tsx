@@ -2,24 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useT } from "@/i18n/LocaleProvider";
 
-const FREE_FEATURES = [
-  "Access to all published topics",
-  "Read focal and counter papers",
-  "Full discussion participation",
-  "Build on others' arguments",
-  "Comprehension quiz",
+const FREE_FEATURE_KEYS = [
+  "upgrade.feature.free.allTopics",
+  "upgrade.feature.free.readPapers",
+  "upgrade.feature.free.discussion",
+  "upgrade.feature.free.buildOn",
+  "upgrade.feature.free.quiz",
 ];
 
-const PRO_FEATURES = [
-  "Everything in Free",
-  "AI Q&A grounded in source papers",
-  "Socratic reasoning partner (Claude)",
-  "Conversation history per topic",
-  "Priority access to new topics",
+const PRO_FEATURE_KEYS = [
+  "upgrade.feature.pro.everythingInFree",
+  "upgrade.feature.pro.aiQa",
+  "upgrade.feature.pro.socratic",
+  "upgrade.feature.pro.history",
+  "upgrade.feature.pro.priority",
 ];
 
 export default function UpgradePage() {
+  const t = useT();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,7 +41,7 @@ export default function UpgradePage() {
       const { url } = await res.json();
       window.location.href = url;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(err instanceof Error ? err.message : t("upgrade.error.generic"));
       setLoading(false);
     }
   }
@@ -48,10 +50,10 @@ export default function UpgradePage() {
     <div className="page-narrow" style={{ paddingTop: "3rem" }}>
       <div style={{ textAlign: "center", marginBottom: "3rem" }}>
         <h1 style={{ fontSize: "1.75rem", fontWeight: 800, marginBottom: "0.5rem" }}>
-          Unlock AI Q&A
+          {t("upgrade.title")}
         </h1>
         <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.65, maxWidth: 460, margin: "0 auto" }}>
-          Upgrade to Pro to get a Socratic AI reasoning partner grounded in each topic's source papers — not a general chatbot.
+          {t("upgrade.prose.subtitle")}
         </p>
       </div>
 
@@ -59,19 +61,19 @@ export default function UpgradePage() {
         {/* Free */}
         <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "1.5rem" }}>
           <p style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
-            Free
+            {t("upgrade.plan.free")}
           </p>
-          <p style={{ fontSize: "1.6rem", fontWeight: 800, marginBottom: "1.25rem" }}>$0</p>
+          <p style={{ fontSize: "1.6rem", fontWeight: 800, marginBottom: "1.25rem" }}>{t("upgrade.plan.freePrice")}</p>
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {FREE_FEATURES.map((f) => (
-              <li key={f} style={{ fontSize: "0.85rem", color: "var(--text-secondary)", display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
-                <span style={{ color: "#2a7a3b", flexShrink: 0, marginTop: "0.05rem" }}>✓</span>
-                {f}
+            {FREE_FEATURE_KEYS.map((key) => (
+              <li key={key} style={{ fontSize: "0.85rem", color: "var(--text-secondary)", display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+                <span style={{ color: "var(--success)", flexShrink: 0, marginTop: "0.05rem" }}>✓</span>
+                {t(key)}
               </li>
             ))}
           </ul>
           <Link href="/topics" className="btn" style={{ display: "block", textAlign: "center", textDecoration: "none", width: "100%" }}>
-            Get started
+            {t("upgrade.cta.getStarted")}
           </Link>
         </div>
 
@@ -92,24 +94,24 @@ export default function UpgradePage() {
             borderRadius: 10,
             whiteSpace: "nowrap",
           }}>
-            Most popular
+            {t("upgrade.plan.mostPopular")}
           </span>
           <p style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--accent)", marginBottom: "0.5rem" }}>
-            Pro
+            {t("upgrade.plan.pro")}
           </p>
           <div style={{ marginBottom: "1.25rem" }}>
-            <span style={{ fontSize: "1.6rem", fontWeight: 800 }}>$9</span>
-            <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>/month</span>
+            <span style={{ fontSize: "1.6rem", fontWeight: 800 }}>{t("upgrade.plan.proPrice")}</span>
+            <span style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>{t("upgrade.plan.proPriceSuffix")}</span>
           </div>
           <ul style={{ listStyle: "none", padding: 0, margin: "0 0 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {PRO_FEATURES.map((f) => (
-              <li key={f} style={{ fontSize: "0.85rem", color: "var(--text-secondary)", display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+            {PRO_FEATURE_KEYS.map((key) => (
+              <li key={key} style={{ fontSize: "0.85rem", color: "var(--text-secondary)", display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
                 <span style={{ color: "var(--accent)", flexShrink: 0, marginTop: "0.05rem" }}>✓</span>
-                {f}
+                {t(key)}
               </li>
             ))}
           </ul>
-          {error && <p style={{ fontSize: "0.78rem", color: "#c44", marginBottom: "0.5rem" }}>{error}</p>}
+          {error && <p style={{ fontSize: "0.78rem", color: "var(--danger)", marginBottom: "0.5rem" }}>{error}</p>}
           <button
             type="button"
             className="btn btn-primary"
@@ -117,13 +119,13 @@ export default function UpgradePage() {
             onClick={handleUpgrade}
             disabled={loading}
           >
-            {loading ? "Redirecting…" : "Upgrade to Pro"}
+            {loading ? t("upgrade.cta.upgradeLoading") : t("upgrade.cta.upgrade")}
           </button>
         </div>
       </div>
 
       <p style={{ textAlign: "center", fontSize: "0.78rem", color: "var(--text-muted)", marginTop: "1.5rem" }}>
-        Cancel anytime. Payments processed securely by Stripe.
+        {t("upgrade.prose.cancelAnytime")}
       </p>
     </div>
   );

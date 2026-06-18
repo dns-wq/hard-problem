@@ -21,11 +21,11 @@ export default function ModerationPage() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {items.map((item) => (
-            <div key={item.id} style={{ background: "var(--bg-surface)", border: "1px solid #e04040", borderRadius: 8, padding: "1rem 1.25rem" }}>
+            <div key={item.id} style={{ background: "var(--bg-surface)", border: "1px solid var(--danger)", borderRadius: 8, padding: "1rem 1.25rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.4rem", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "#c44", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 4, padding: "0.1rem 0.4rem" }}>
+                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--danger)", background: "var(--danger-bg)", border: "1px solid var(--danger-border)", borderRadius: 4, padding: "0.1rem 0.4rem" }}>
                       flagged
                     </span>
                     <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
@@ -77,7 +77,7 @@ export default function ModerationPage() {
                   </button>
                   <button
                     className="btn"
-                    style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem", color: "#c44", borderColor: "#c44" }}
+                    style={{ fontSize: "0.75rem", padding: "0.25rem 0.6rem", color: "var(--danger)", borderColor: "var(--danger)" }}
                     onClick={() => { if (confirm("Remove this contribution? The author will be notified.")) remove.mutate({ id: item.id }); }}
                     disabled={remove.isPending}
                   >

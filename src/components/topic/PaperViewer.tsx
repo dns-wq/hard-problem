@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/i18n/LocaleProvider";
 
 const PROXY_ALLOWED_DOMAINS = [
   "arxiv.org",
@@ -28,6 +29,7 @@ interface PaperViewerProps {
 }
 
 export default function PaperViewer({ pdfUrl, title, onClose }: PaperViewerProps) {
+  const t = useT();
   const [iframeError, setIframeError] = useState(false);
   const proxied = isProxiable(pdfUrl);
   const src = proxied ? `/api/proxy-pdf?url=${encodeURIComponent(pdfUrl)}` : pdfUrl;
@@ -59,13 +61,13 @@ export default function PaperViewer({ pdfUrl, title, onClose }: PaperViewerProps
             rel="noopener noreferrer"
             style={{ fontSize: "0.75rem", color: "var(--accent)", textDecoration: "none" }}
           >
-            Open in new tab →
+            {t("topic.paperViewer.openNewTab")}
           </a>
           <button
             onClick={onClose}
             style={{ fontSize: "0.75rem", color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: "0.5rem" }}
           >
-            ✕ Close
+            {t("topic.paperViewer.close")}
           </button>
         </div>
       </div>
@@ -74,7 +76,7 @@ export default function PaperViewer({ pdfUrl, title, onClose }: PaperViewerProps
       {iframeError ? (
         <div style={{ padding: "2rem", textAlign: "center" }}>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginBottom: "1rem" }}>
-            The PDF couldn't be displayed inline. The publisher may block embedding.
+            {t("topic.paperViewer.error")}
           </p>
           <a
             href={pdfUrl}
@@ -83,7 +85,7 @@ export default function PaperViewer({ pdfUrl, title, onClose }: PaperViewerProps
             className="btn btn-primary"
             style={{ textDecoration: "none", display: "inline-block" }}
           >
-            Open PDF in new tab →
+            {t("topic.paperViewer.openPdfNewTab")}
           </a>
         </div>
       ) : (

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/LocaleProvider";
 import ContributionCard from "./ContributionCard";
 
 type Reply = {
@@ -37,6 +38,7 @@ export default function ContributionList({
   isLoading,
   onMutated,
 }: ContributionListProps) {
+  const t = useT();
   if (isLoading) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
@@ -64,8 +66,8 @@ export default function ContributionList({
         color: "var(--text-muted)",
         fontSize: "0.9rem",
       }}>
-        <p style={{ marginBottom: "0.4rem" }}>No contributions yet.</p>
-        <p style={{ fontSize: "0.82rem" }}>Be the first to share your analysis.</p>
+        <p style={{ marginBottom: "0.4rem" }}>{t("discuss.empty.title")}</p>
+        <p style={{ fontSize: "0.82rem" }}>{t("discuss.empty.cta")}</p>
       </div>
     );
   }

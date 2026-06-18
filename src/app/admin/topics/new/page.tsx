@@ -63,7 +63,7 @@ export default function NewTopicPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label className="form-label">Title <span style={{ color: "#c44" }}>*</span></label>
+          <label className="form-label">Title <span style={{ color: "var(--danger)" }}>*</span></label>
           <input
             className="form-input"
             value={form.title}
@@ -74,7 +74,7 @@ export default function NewTopicPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Slug <span style={{ color: "#c44" }}>*</span></label>
+          <label className="form-label">Slug <span style={{ color: "var(--danger)" }}>*</span></label>
           <input
             className="form-input"
             value={form.slug}
@@ -131,7 +131,7 @@ export default function NewTopicPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Discussion prompt <span style={{ color: "#c44" }}>*</span></label>
+          <label className="form-label">Discussion prompt <span style={{ color: "var(--danger)" }}>*</span></label>
           <input
             className="form-input"
             value={form.discussion_prompt}
@@ -145,12 +145,12 @@ export default function NewTopicPage() {
         <p style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "1rem", textTransform: "uppercase", letterSpacing: "0.04em" }}>Real-world anchor</p>
 
         <div className="form-group">
-          <label className="form-label">Anchor title <span style={{ color: "#c44" }}>*</span></label>
+          <label className="form-label">Anchor title <span style={{ color: "var(--danger)" }}>*</span></label>
           <input className="form-input" value={form.anchor_title} onChange={(e) => setForm((f) => ({ ...f, anchor_title: e.target.value }))} placeholder="The Uber Self-Driving Car Fatality (2018)" required />
         </div>
 
         <div className="form-group">
-          <label className="form-label">Anchor body <span style={{ color: "#c44" }}>*</span></label>
+          <label className="form-label">Anchor body <span style={{ color: "var(--danger)" }}>*</span></label>
           <textarea
             className="form-textarea"
             value={form.anchor_body}
@@ -166,7 +166,7 @@ export default function NewTopicPage() {
           <input className="form-input" type="url" value={form.anchor_source_url} onChange={(e) => setForm((f) => ({ ...f, anchor_source_url: e.target.value }))} placeholder="https://…" />
         </div>
 
-        {error && <p style={{ color: "#c44", fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</p>}
+        {error && <p style={{ color: "var(--danger)", fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</p>}
 
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button type="submit" className="btn btn-primary" disabled={create.isPending}>

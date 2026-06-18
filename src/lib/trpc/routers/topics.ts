@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, adminProcedure, protectedProcedure } from "@/lib/trpc/server";
+import { overlayTranslations, overlayOne } from "@/lib/i18n/contentOverlay";
 
 export const topicsRouter = createTRPCRouter({
   // List published topics with optional filters and cursor pagination
@@ -37,7 +38,9 @@ export const topicsRouter = createTRPCRouter({
 
       const { data, error } = await query;
       if (error) throw error;
-      return data ?? [];
+      // Overlay zh-TW content (title / framing_note / discussion_prompt /
+      // real_world_anchor.*) where reviewed; English rows fall through untouched.
+      return overlayTranslations(ctx.supabase, ctx.locale, "topic", data ?? []);
     }),
 
   // Get a single topic by slug (published only for public; drafts for editors)
@@ -50,7 +53,7 @@ export const topicsRouter = createTRPCRouter({
         .eq("slug", input.slug)
         .single();
       if (error) throw error;
-      return data;
+      return overlayOne(ctx.supabase, ctx.locale, "topic", data);
     }),
 
   // Admin: list all topics regardless of status

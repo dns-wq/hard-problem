@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useThemeStore } from "@/stores/theme";
+import { useLocale, useT } from "@/i18n/LocaleProvider";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { trpc } from "@/lib/trpc/client";
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +13,8 @@ import type { User } from "@supabase/supabase-js";
 export function Header() {
   const pathname = usePathname();
   const { theme, setTheme } = useThemeStore();
+  const { locale, setLocale } = useLocale();
+  const t = useT();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -50,28 +53,36 @@ export function Header() {
             href="/topics"
             className={`header-link ${pathname.startsWith("/topics") ? "active" : ""}`}
           >
-            Topics
+            {t("nav.topics")}
           </Link>
           <Link
             href="/concepts"
             className={`header-link ${pathname.startsWith("/concepts") ? "active" : ""}`}
           >
-            Concepts
+            {t("nav.concepts")}
           </Link>
           <Link
             href="/about"
             className={`header-link ${pathname === "/about" ? "active" : ""}`}
           >
-            About
+            {t("nav.about")}
           </Link>
         </nav>
 
         <div className="header-controls">
           <button
             className="header-btn"
+            onClick={() => setLocale(locale === "en" ? "zh-TW" : "en")}
+            aria-label={t("nav.switchLanguage")}
+          >
+            {locale === "en" ? "繁中" : "EN"}
+          </button>
+
+          <button
+            className="header-btn"
             onClick={() => setTheme(nextTheme)}
-            title={`Switch to ${nextTheme} mode`}
-            aria-label="Toggle theme"
+            title={t("nav.toggleTheme")}
+            aria-label={t("nav.toggleTheme")}
           >
             {themeLabel}
           </button>
@@ -80,19 +91,19 @@ export function Header() {
             <>
               <NotificationBell />
               <Link href="/profile" className="header-btn">
-                Profile
+                {t("nav.profile")}
               </Link>
               <button className="header-btn" onClick={handleSignOut}>
-                Sign out
+                {t("nav.signOut")}
               </button>
             </>
           ) : (
             <>
               <Link href="/auth/login" className="header-btn">
-                Sign in
+                {t("nav.signIn")}
               </Link>
               <Link href="/auth/signup" className="header-btn header-btn-primary">
-                Sign up
+                {t("nav.signUp")}
               </Link>
             </>
           )}

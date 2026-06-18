@@ -3,29 +3,32 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import LiveTranscript from "@/components/profile/LiveTranscript";
+import { useT } from "@/i18n/LocaleProvider";
 
 export default function PublicProfilePage() {
+  const t = useT();
   const params = useParams<{ displayName: string }>();
   const displayName = decodeURIComponent(params.displayName);
 
   const { data, isLoading, error } = trpc.profile.publicProfile.useQuery({ displayName });
 
   if (isLoading) {
-    return <div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>Loading…</p></div>;
+    return <div className="page-narrow"><p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p></div>;
   }
 
   if (error || !data) {
     return (
       <div className="page-narrow" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <p style={{ color: "var(--text-muted)" }}>Profile not found.</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("profile.public.notFound")}</p>
         <Link href="/topics" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          ← Topics
+          {t("profile.cta.backTopics")}
         </Link>
       </div>
     );
   }
 
-  const { user, contributions } = data;
+  const { user, contributions, transcript } = data;
 
   return (
     <div className="page-narrow">
@@ -39,14 +42,25 @@ export default function PublicProfilePage() {
           </p>
         )}
         <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.3rem" }}>
-          Member since {new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+          {t("profile.memberSince", { date: new Date(user.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) })}
         </p>
       </div>
+
+      {/* Public transcript — rendered only when the user has published it
+          (transcript is null otherwise; no placeholder reveals the opt-out) */}
+      {transcript && (
+        <section style={{ marginBottom: "2rem" }}>
+          <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
+            {t("profile.section.transcript")}
+          </h2>
+          <LiveTranscript counts={transcript.counts} stamps={transcript.stamps} />
+        </section>
+      )}
 
       {contributions.length > 0 && (
         <section>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-            Contributions
+            {t("profile.public.section.contributions")}
           </h2>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
             {contributions.map((c) => {

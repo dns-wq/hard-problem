@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 
 interface ComposerProps {
   topicId: string;
@@ -12,6 +13,7 @@ interface ComposerProps {
 }
 
 export default function Composer({ topicId, discussionPrompt, currentUserId, onSuccess }: ComposerProps) {
+  const t = useT();
   const [body, setBody] = useState("");
   const [stanceTag, setStanceTag] = useState("");
   const [error, setError] = useState("");
@@ -35,6 +37,9 @@ export default function Composer({ topicId, discussionPrompt, currentUserId, onS
   }
 
   if (!currentUserId) {
+    const tpl = t("discuss.signedOut.joinPrompt");
+    const [a, rest] = tpl.split("{signIn}");
+    const [b, c] = rest.split("{createAccount}");
     return (
       <div style={{
         border: "1px dashed var(--border)",
@@ -44,14 +49,15 @@ export default function Composer({ topicId, discussionPrompt, currentUserId, onS
         marginBottom: "1.5rem",
       }}>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem", marginBottom: "0.75rem" }}>
+          {a}
           <Link href="/auth/login" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
-            Sign in
-          </Link>{" "}
-          or{" "}
+            {t("nav.signIn")}
+          </Link>
+          {b}
           <Link href="/auth/signup" style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
-            create an account
-          </Link>{" "}
-          to join the discussion.
+            {t("discuss.signedOut.createAccount")}
+          </Link>
+          {c}
         </p>
       </div>
     );
@@ -71,7 +77,7 @@ export default function Composer({ topicId, discussionPrompt, currentUserId, onS
             <input
               value={stanceTag}
               onChange={(e) => setStanceTag(e.target.value.slice(0, 100))}
-              placeholder="Your stance (optional)"
+              placeholder={t("discuss.composer.stancePlaceholder")}
               style={{
                 fontSize: "0.8rem",
                 padding: "0.3rem 0.6rem",
@@ -83,10 +89,10 @@ export default function Composer({ topicId, discussionPrompt, currentUserId, onS
                 width: 180,
               }}
             />
-            {error && <span style={{ fontSize: "0.78rem", color: "#c44" }}>{error}</span>}
+            {error && <span style={{ fontSize: "0.78rem", color: "var(--danger)" }}>{error}</span>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "0.72rem", color: body.length > MAX * 0.9 ? "#c44" : "var(--text-muted)" }}>
+            <span style={{ fontSize: "0.72rem", color: body.length > MAX * 0.9 ? "var(--danger)" : "var(--text-muted)" }}>
               {body.length}/{MAX}
             </span>
             <button
@@ -94,7 +100,7 @@ export default function Composer({ topicId, discussionPrompt, currentUserId, onS
               className="composer-submit"
               disabled={!body.trim() || create.isPending}
             >
-              {create.isPending ? "Posting…" : "Post"}
+              {create.isPending ? t("discuss.cta.posting") : t("discuss.cta.post")}
             </button>
           </div>
         </div>

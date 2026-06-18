@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 import FramingSection from "@/components/topic/FramingSection";
 import RealWorldAnchor from "@/components/topic/RealWorldAnchor";
 import PapersSection from "@/components/topic/PapersSection";
@@ -10,12 +11,13 @@ import ConceptChip from "@/components/topic/ConceptChip";
 import VideosSection from "@/components/topic/VideosSection";
 
 const DIFFICULTY_COLOR: Record<string, string> = {
-  accessible: "#2a7a3b",
-  intermediate: "#3b6ea5",
+  accessible: "var(--success)",
+  intermediate: "#b8791f",
   advanced: "#7b3fa0",
 };
 
 export default function TopicPage() {
+  const t = useT();
   const params = useParams<{ slug: string }>();
 
   const { data: topic, isLoading, error } = trpc.topics.bySlug.useQuery({ slug: params.slug });
@@ -44,9 +46,9 @@ export default function TopicPage() {
   if (error || !topic) {
     return (
       <div className="page-narrow" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <p style={{ color: "var(--text-muted)" }}>Topic not found.</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("topic.error.notFound")}</p>
         <Link href="/topics" className="btn" style={{ marginTop: "1rem", display: "inline-block", textDecoration: "none" }}>
-          ← All topics
+          {t("nav.allTopics")}
         </Link>
       </div>
     );
@@ -58,7 +60,7 @@ export default function TopicPage() {
     <div className="page-narrow">
       {/* Breadcrumb */}
       <Link href="/topics" style={{ fontSize: "0.8rem", color: "var(--text-muted)", textDecoration: "none", display: "inline-block", marginBottom: "1.5rem" }}>
-        ← Topics
+        {t("topic.breadcrumb.topics")}
       </Link>
 
       {/* Header */}
@@ -73,15 +75,15 @@ export default function TopicPage() {
               color: DIFFICULTY_COLOR[topic.difficulty] ?? "var(--text-muted)",
             }}
           >
-            {topic.difficulty}
+            {t(`topic.difficulty.${topic.difficulty}`)}
           </span>
           {(topic.domains ?? []).slice(0, 3).map((d: string) => (
             <span key={d} className="tag">{d.replace(/_/g, " ")}</span>
           ))}
           {stats && (
             <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginLeft: "auto" }}>
-              {stats.contributionCount} discussion{stats.contributionCount !== 1 ? "s" : ""}
-              {stats.activeReaderCount > 0 && ` · ${stats.activeReaderCount} reading now`}
+              {t(stats.contributionCount === 1 ? "topic.stats.discussions.one" : "topic.stats.discussions.other", { count: stats.contributionCount })}
+              {stats.activeReaderCount > 0 && <> · {t("topic.stats.readingNow", { count: stats.activeReaderCount })}</>}
             </span>
           )}
         </div>
@@ -102,13 +104,24 @@ export default function TopicPage() {
             {topic.discussion_prompt}
           </p>
         </div>
+
+        {/* Live session entry point — put this question to a room in real time */}
+        <div style={{ marginTop: "0.75rem" }}>
+          <Link
+            href={`/live/new?topic=${topic.slug}`}
+            className="btn"
+            style={{ textDecoration: "none", display: "inline-block", fontSize: "0.8rem" }}
+          >
+            {t("topic.cta.hostLive")}
+          </Link>
+        </div>
       </div>
 
       {/* Framing note */}
       {topic.framing_note && (
         <section style={{ marginBottom: "2rem" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "1rem" }}>
-            Framing
+            {t("topic.section.framing")}
           </h2>
           <FramingSection text={topic.framing_note} />
         </section>
@@ -132,7 +145,7 @@ export default function TopicPage() {
       {concepts && concepts.length > 0 && (
         <section style={{ marginBottom: "2rem" }}>
           <h2 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", marginBottom: "0.75rem" }}>
-            Key concepts
+            {t("topic.section.keyConcepts")}
           </h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
             {(concepts as unknown as { id: string; term: string; slug: string }[]).map((c) => (
@@ -159,17 +172,17 @@ export default function TopicPage() {
         marginTop: "1rem",
       }}>
         <p style={{ fontWeight: 600, fontSize: "1rem", marginBottom: "0.4rem" }}>
-          Join the discussion
+          {t("topic.cta.joinDiscussion")}
         </p>
         <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginBottom: "1rem" }}>
-          Share your analysis, build on others' arguments, and take the comprehension quiz to unlock AI Q&A.
+          {t("topic.discussionCta.body")}
         </p>
         <Link
           href={`/topics/${topic.slug}/discuss`}
           className="btn btn-primary"
           style={{ textDecoration: "none", display: "inline-block" }}
         >
-          Go to discussion
+          {t("topic.cta.goToDiscussion")}
         </Link>
       </div>
     </div>

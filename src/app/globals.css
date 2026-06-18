@@ -2,33 +2,49 @@
 
 /* ===== Theme Variables ===== */
 
+/* ===== Theme — "Humane editorial" (HDS-inspired) =====
+   Warm paper neutrals + near-black ink + one confident accent (Helsinki blue).
+   A small named palette: Paper / Ink / Helsinki / Mist / Fog. */
+
 :root,
 [data-theme="light"] {
-  --bg-primary: #f8f9fb;
-  --bg-secondary: #eef0f4;
-  --bg-surface: #ffffff;
-  --text-primary: #1a1c20;
-  --text-secondary: #4a4e58;
-  --text-muted: #8a8f9c;
-  --border: #dde0e8;
-  --border-light: #e8eaef;
-  --accent: #3b6ea5;
-  --accent-hover: #2d5a8e;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --bg-primary: #f2eee4;   /* page (warm) */
+  --bg-secondary: #e9e3d5; /* muted surface */
+  --bg-surface: #fbf9f3;   /* Paper — cards */
+  --text-primary: #15181f; /* Ink */
+  --text-secondary: #4c525a;
+  --text-muted: #767c72;
+  --border: #ddd7c8;       /* Fog */
+  --border-light: #eae5d8;
+  --accent: #0000bf;       /* Helsinki — Coat-of-Arms blue */
+  --accent-hover: #00009c;
+  --accent-tint: #e6ecf8;  /* Mist — selected/hover */
+  --accent-soft: #aebbe8;  /* muted Helsinki — chart fills */
+  --success: #2a7a3b;
+  --danger: #c0392b;
+  --danger-bg: #f7e7e3;
+  --danger-border: #e3bdb3;
+  --shadow: 0 1px 2px rgba(21, 24, 31, 0.06);
 }
 
 [data-theme="dark"] {
-  --bg-primary: #13151a;
-  --bg-secondary: #1c1f26;
-  --bg-surface: #22252e;
-  --text-primary: #e0e2e8;
-  --text-secondary: #a0a4b0;
-  --text-muted: #5a5f6e;
-  --border: #2e3240;
-  --border-light: #282c38;
-  --accent: #6b9fd4;
-  --accent-hover: #7eaee0;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --bg-primary: #1b1a18;   /* warm charcoal, not cool gray */
+  --bg-secondary: #252320;
+  --bg-surface: #2a2825;
+  --text-primary: #ece8df; /* warm off-white */
+  --text-secondary: #aba593;
+  --text-muted: #6f6b5c;
+  --border: #38352f;
+  --border-light: #302d29;
+  --accent: #8fa1ff;       /* lifted Helsinki blue for contrast on dark */
+  --accent-hover: #a8b5ff;
+  --accent-tint: #232739;
+  --accent-soft: #49507a;  /* muted Helsinki — chart fills */
+  --success: #74c08a;
+  --danger: #c0392b;
+  --danger-bg: #2c1f1c;
+  --danger-border: #46332e;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== Base ===== */
@@ -36,14 +52,27 @@
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans), var(--font-sans-tc), system-ui, -apple-system, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Use serif font for framing notes and paper excerpts only */
+h1, h2, h3, h4 {
+  font-family: var(--font-sans), var(--font-sans-tc), system-ui, sans-serif;
+  letter-spacing: -0.012em;
+}
+
+/* Reading serif for framing notes, paper excerpts, and long-form prose */
 .prose-serif {
-  font-family: "Georgia", "Times New Roman", serif;
+  font-family: var(--font-serif), var(--font-serif-tc), Georgia, "Times New Roman", serif;
   line-height: 1.7;
+}
+
+/* Accessibility baked in (the HDS move): a high-contrast focus ring on every
+   interactive element, shown only for keyboard users. */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 3px solid var(--text-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 
 /* ===== Header ===== */
@@ -178,9 +207,9 @@ body {
 }
 
 .tag-accent {
-  background: rgba(59, 110, 165, 0.08);
+  background: rgba(0, 0, 191, 0.08);
   color: var(--accent);
-  border-color: rgba(59, 110, 165, 0.2);
+  border-color: rgba(0, 0, 191, 0.2);
 }
 
 /* ===== Progress Dots ===== */
@@ -224,7 +253,7 @@ body {
 /* ===== Framing Note ===== */
 
 .framing-note {
-  font-family: "Georgia", "Times New Roman", serif;
+  font-family: var(--font-serif), var(--font-serif-tc), Georgia, serif;
   font-size: 1.05rem;
   line-height: 1.75;
   color: var(--text-primary);
@@ -291,8 +320,9 @@ body {
 }
 
 .contribution-body {
-  font-size: 0.9rem;
-  line-height: 1.65;
+  font-family: var(--font-serif), var(--font-serif-tc), Georgia, serif;
+  font-size: 0.97rem;
+  line-height: 1.72;
   color: var(--text-primary);
 }
 
@@ -321,9 +351,9 @@ body {
   font-size: 0.7rem;
   padding: 2px 7px;
   border-radius: 10px;
-  background: rgba(59, 110, 165, 0.06);
+  background: rgba(0, 0, 191, 0.06);
   color: var(--accent);
-  border: 1px solid rgba(59, 110, 165, 0.15);
+  border: 1px solid rgba(0, 0, 191, 0.15);
 }
 
 /* ===== Landscape Visualization ===== */
@@ -502,11 +532,11 @@ body {
   font-size: 0.7rem;
   padding: 1px 5px;
   border-radius: 3px;
-  background: rgba(59, 110, 165, 0.1);
+  background: rgba(0, 0, 191, 0.1);
   color: var(--accent);
   cursor: pointer;
   margin: 0 1px;
-  border: 1px solid rgba(59, 110, 165, 0.2);
+  border: 1px solid rgba(0, 0, 191, 0.2);
   vertical-align: super;
 }
 
@@ -567,7 +597,7 @@ body {
 
 .auth-error {
   font-size: 0.8rem;
-  color: #c44;
+  color: var(--danger);
   margin: 0;
 }
 
@@ -649,7 +679,7 @@ body {
   height: 16px;
   padding: 0 3px;
   border-radius: 8px;
-  background: #e04040;
+  background: var(--danger);
   color: white;
   font-size: 0.65rem;
   font-weight: 700;
@@ -686,7 +716,7 @@ body {
 }
 
 .notification-item.unread {
-  background: rgba(59, 110, 165, 0.04);
+  background: rgba(0, 0, 191, 0.04);
 }
 
 /* ===== Modal ===== */
@@ -851,9 +881,9 @@ body {
 .btn-primary:hover { background: var(--accent-hover); color: white; }
 
 .btn-danger {
-  background: #c44;
+  background: var(--danger);
   color: white;
-  border-color: #c44;
+  border-color: var(--danger);
 }
 
 /* ===== Responsive ===== */
@@ -862,4 +892,78 @@ body {
   .header-inner { padding: 0.5rem 1rem; }
   .header-nav { display: none; }
   .page, .page-narrow { padding: 1.5rem 1rem; }
+}
+
+/* ===== Live Sessions ===== */
+.live-code {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-indent: 0.35em; /* re-center: letter-spacing adds trailing space */
+}
+
+.live-code-input {
+  text-align: center;
+  letter-spacing: 0.3em;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.live-option-btn {
+  display: block;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.live-option-btn:hover { border-color: var(--accent); }
+.live-option-btn.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  font-weight: 600;
+}
+
+.live-chip {
+  padding: 0.25rem 0.6rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.live-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.live-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.3rem;
+}
+.live-icon-btn:hover { color: var(--accent); }
+.live-icon-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* Reaction bursts (Sprint 3) — float up and fade; the parent prunes them */
+.reaction-burst {
+  animation: reaction-float 2s ease-out forwards;
+  will-change: transform, opacity;
+}
+@keyframes reaction-float {
+  0%   { transform: translateY(0) scale(0.7); opacity: 0; }
+  15%  { transform: translateY(-10%) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-70vh) scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reaction-burst { animation-duration: 0.8s; }
 }

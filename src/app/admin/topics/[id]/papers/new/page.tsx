@@ -98,7 +98,7 @@ export default function NewPaperPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label className="form-label">Title <span style={{ color: "#c44" }}>*</span></label>
+          <label className="form-label">Title <span style={{ color: "var(--danger)" }}>*</span></label>
           <input
             className="form-input"
             value={form.title}
@@ -110,7 +110,7 @@ export default function NewPaperPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Authors <span style={{ color: "#c44" }}>*</span></label>
+          <label className="form-label">Authors <span style={{ color: "var(--danger)" }}>*</span></label>
           <input
             className="form-input"
             value={form.authors}
@@ -134,7 +134,7 @@ export default function NewPaperPage() {
             />
           </div>
           <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label">Role <span style={{ color: "#c44" }}>*</span></label>
+            <label className="form-label">Role <span style={{ color: "var(--danger)" }}>*</span></label>
             <select
               className="form-select"
               value={form.role}
@@ -159,7 +159,7 @@ export default function NewPaperPage() {
         </div>
 
         <div className="form-group" style={{ marginTop: "1rem" }}>
-          <label className="form-label">Source URL <span style={{ color: "#c44" }}>*</span></label>
+          <label className="form-label">Source URL <span style={{ color: "var(--danger)" }}>*</span></label>
           <input
             className="form-input"
             type="url"
@@ -210,7 +210,7 @@ export default function NewPaperPage() {
           />
         </div>
 
-        {error && <p style={{ color: "#c44", fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</p>}
+        {error && <p style={{ color: "var(--danger)", fontSize: "0.85rem", marginBottom: "1rem" }}>{error}</p>}
 
         {!isSaved && (
           <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -265,10 +265,10 @@ export default function NewPaperPage() {
               {embedStatus === "loading" ? "Embedding…" : embedStatus === "done" ? "Re-embed" : "Embed paper"}
             </button>
             {embedStatus === "done" && (
-              <span style={{ fontSize: "0.8rem", color: "#2a7a3b" }}>Embeddings saved.</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--success)" }}>Embeddings saved.</span>
             )}
             {embedStatus === "error" && (
-              <span style={{ fontSize: "0.8rem", color: "#c44" }}>{embedError}</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--danger)" }}>{embedError}</span>
             )}
           </div>
 

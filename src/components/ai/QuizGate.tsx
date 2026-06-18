@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 
 interface QuizGateProps {
   topicId: string;
@@ -9,6 +10,7 @@ interface QuizGateProps {
 }
 
 export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
+  const t = useT();
   const { data: questions, isLoading } = trpc.quiz.byTopic.useQuery({ topicId });
   const submit = trpc.ai.submitQuiz.useMutation();
 
@@ -27,14 +29,14 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
   }
 
   if (isLoading) {
-    return <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "1rem" }}>Loading quiz…</p>;
+    return <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "1rem" }}>{t("ai.quiz.loading")}</p>;
   }
 
   if (!questions || questions.length === 0) {
     return (
       <div style={{ padding: "1.25rem", textAlign: "center" }}>
         <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
-          No quiz set for this topic yet. Check back soon.
+          {t("ai.quiz.emptyTitle")}
         </p>
       </div>
     );
@@ -43,8 +45,8 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
   if (passed) {
     return (
       <div style={{ padding: "1.5rem", textAlign: "center" }}>
-        <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "#2a7a3b", marginBottom: "0.4rem" }}>Quiz passed!</p>
-        <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>Unlocking AI Q&A…</p>
+        <p style={{ fontSize: "1.1rem", fontWeight: 700, color: "var(--success)", marginBottom: "0.4rem" }}>{t("ai.quiz.passedTitle")}</p>
+        <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>{t("ai.quiz.passedBody")}</p>
       </div>
     );
   }
@@ -52,7 +54,7 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
   return (
     <div style={{ overflowY: "auto", flex: 1, padding: "1rem 1.25rem" }}>
       <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "1.25rem", lineHeight: 1.55 }}>
-        Answer the comprehension quiz to unlock AI Q&A for this topic. Unlimited attempts.
+        {t("ai.quiz.intro")}
       </p>
 
       <form onSubmit={handleSubmit}>
@@ -81,17 +83,20 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
 
               {q.question_type === "true_false" ? (
                 <div style={{ display: "flex", gap: "0.75rem" }}>
-                  {["True", "False"].map((opt) => (
-                    <label key={opt} style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.875rem", cursor: "pointer" }}>
+                  {[
+                    { value: "true", label: t("live.quiz.choice.true") },
+                    { value: "false", label: t("live.quiz.choice.false") },
+                  ].map((opt) => (
+                    <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.875rem", cursor: "pointer" }}>
                       <input
                         type="radio"
                         name={q.id}
-                        value={opt.toLowerCase()}
-                        checked={answers[q.id] === opt.toLowerCase()}
-                        onChange={() => setAnswers((a) => ({ ...a, [q.id]: opt.toLowerCase() }))}
+                        value={opt.value}
+                        checked={answers[q.id] === opt.value}
+                        onChange={() => setAnswers((a) => ({ ...a, [q.id]: opt.value }))}
                         disabled={!!results}
                       />
-                      {opt}
+                      {opt.label}
                     </label>
                   ))}
                 </div>
@@ -116,7 +121,7 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
 
               {result && !isCorrect && result.explanation && (
                 <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.6rem", lineHeight: 1.5, borderTop: "1px solid var(--border-light)", paddingTop: "0.5rem" }}>
-                  <strong>Explanation:</strong> {result.explanation}
+                  <strong>{t("ai.quiz.explanationLabel")}</strong> {result.explanation}
                 </p>
               )}
             </div>
@@ -124,8 +129,8 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
         })}
 
         {results && !passed && (
-          <p style={{ fontSize: "0.82rem", color: "#c44", marginBottom: "0.75rem" }}>
-            Some answers were incorrect. Review and try again.
+          <p style={{ fontSize: "0.82rem", color: "var(--danger)", marginBottom: "0.75rem" }}>
+            {t("ai.quiz.incorrectRetry")}
           </p>
         )}
 
@@ -136,7 +141,7 @@ export default function QuizGate({ topicId, onPassed }: QuizGateProps) {
           disabled={Object.keys(answers).length < questions.length || submit.isPending}
           onClick={results && !passed ? () => { setResults(null); setAnswers({}); } : undefined}
         >
-          {submit.isPending ? "Checking…" : results && !passed ? "Try again" : "Submit quiz"}
+          {submit.isPending ? t("ai.quiz.cta.checking") : results && !passed ? t("ai.quiz.cta.tryAgain") : t("ai.quiz.cta.submit")}
         </button>
       </form>
     </div>

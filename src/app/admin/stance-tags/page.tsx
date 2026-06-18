@@ -117,7 +117,7 @@ export default function StanceTagsPage() {
                 </div>
               </div>
 
-              {mergeError && <p style={{ color: "#c44", fontSize: "0.85rem", marginTop: "0.5rem" }}>{mergeError}</p>}
+              {mergeError && <p style={{ color: "var(--danger)", fontSize: "0.85rem", marginTop: "0.5rem" }}>{mergeError}</p>}
 
               <div style={{ marginTop: "1rem" }}>
                 <button

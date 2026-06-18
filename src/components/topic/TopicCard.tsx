@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "@/i18n/LocaleProvider";
 
 const DIFFICULTY_COLOR: Record<string, string> = {
-  accessible: "#2a7a3b",
-  intermediate: "#3b6ea5",
+  accessible: "var(--success)",
+  intermediate: "#b8791f",
   advanced: "#7b3fa0",
 };
 
@@ -28,13 +31,14 @@ export default function TopicCard({
   contributionCount,
   activeReaderCount,
 }: TopicCardProps) {
+  const t = useT();
   return (
     <Link href={`/topics/${slug}`} className="topic-card">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem" }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           {sequence_number != null && (
             <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 500, display: "block", marginBottom: "0.2rem" }}>
-              #{sequence_number}
+              {t("topic.card.sequence", { number: sequence_number })}
             </span>
           )}
           <h2 className="topic-card-title">{title}</h2>
@@ -53,7 +57,7 @@ export default function TopicCard({
             marginTop: "0.1rem",
           }}
         >
-          {difficulty}
+          {t(`topic.difficulty.${difficulty}`)}
         </span>
       </div>
 
@@ -62,10 +66,10 @@ export default function TopicCard({
           <span key={d} className="tag">{d.replace(/_/g, " ")}</span>
         ))}
         {contributionCount != null && (
-          <span>{contributionCount} discussion{contributionCount !== 1 ? "s" : ""}</span>
+          <span>{t(contributionCount === 1 ? "topic.stats.discussions.one" : "topic.stats.discussions.other", { count: contributionCount })}</span>
         )}
         {activeReaderCount != null && activeReaderCount > 0 && (
-          <span>{activeReaderCount} reading now</span>
+          <span>{t("topic.stats.readingNow", { count: activeReaderCount })}</span>
         )}
       </div>
     </Link>

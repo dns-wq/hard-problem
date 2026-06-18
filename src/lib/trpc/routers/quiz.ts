@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure, adminProcedure } from "@/lib/trpc/server";
+import { overlayTranslations } from "@/lib/i18n/contentOverlay";
 
 export const quizRouter = createTRPCRouter({
   // List quiz questions for a topic (public — questions must be readable to display them)
@@ -14,7 +15,8 @@ export const quizRouter = createTRPCRouter({
       if (error) throw error;
       // Note: correct_answer and explanation are intentionally excluded from this public query.
       // They are returned only by ai.submitQuiz after grading.
-      return data ?? [];
+      // Overlay zh-TW (question_text / option text) where reviewed; English falls through.
+      return overlayTranslations(ctx.supabase, ctx.locale, "quiz_question", data ?? []);
     }),
 
   // Admin: create quiz question

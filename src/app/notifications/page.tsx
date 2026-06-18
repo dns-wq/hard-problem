@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 
-const TYPE_LABEL: Record<string, string> = {
-  build_on: "built on your contribution",
-  reply: "reacted to your contribution",
-  moderation: "your contribution was removed by a moderator",
-};
+const KNOWN_TYPES = new Set(["build_on", "reply", "moderation", "session_reminder"]);
 
 export default function NotificationsPage() {
+  const t = useT();
   const { data: notifications, isLoading, refetch } = trpc.notifications.list.useQuery({ limit: 50 });
   const markAll = trpc.notifications.markAllRead.useMutation({ onSuccess: () => refetch() });
   const markOne = trpc.notifications.markRead.useMutation({ onSuccess: () => refetch() });
@@ -19,7 +17,7 @@ export default function NotificationsPage() {
   return (
     <div className="page-narrow">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-        <h1 style={{ fontSize: "1.4rem", fontWeight: 700 }}>Notifications</h1>
+        <h1 style={{ fontSize: "1.4rem", fontWeight: 700 }}>{t("notifications.title")}</h1>
         {unread > 0 && (
           <button
             type="button"
@@ -28,16 +26,16 @@ export default function NotificationsPage() {
             onClick={() => markAll.mutate()}
             disabled={markAll.isPending}
           >
-            Mark all read
+            {t("notifications.cta.markAllRead")}
           </button>
         )}
       </div>
 
       {isLoading ? (
-        <p style={{ color: "var(--text-muted)" }}>Loading…</p>
+        <p style={{ color: "var(--text-muted)" }}>{t("common.loading")}</p>
       ) : !notifications?.length ? (
         <div style={{ textAlign: "center", padding: "3rem 0" }}>
-          <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>No notifications yet.</p>
+          <p style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>{t("notifications.empty")}</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
@@ -61,11 +59,11 @@ export default function NotificationsPage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: "0.875rem", color: "var(--text-primary)", margin: "0 0 0.2rem" }}>
                     {n.type === "moderation" ? (
-                      <span style={{ color: "#c44" }}>{TYPE_LABEL.moderation}</span>
+                      <span style={{ color: "var(--danger)" }}>{t("notifications.type.moderation")}</span>
                     ) : (
                       <>
-                        <strong>{actor?.display_name ?? "Someone"}</strong>{" "}
-                        {TYPE_LABEL[n.type] ?? "interacted with your contribution"}
+                        <strong>{actor?.display_name ?? t("notifications.actor.fallback")}</strong>{" "}
+                        {KNOWN_TYPES.has(n.type) ? t(`notifications.type.${n.type}`) : t("notifications.type.fallback")}
                       </>
                     )}
                   </p>
@@ -97,7 +95,7 @@ export default function NotificationsPage() {
                       marginTop: "0.3rem",
                       padding: 0,
                     }}
-                    title="Mark as read"
+                    title={t("notifications.cta.markAsRead")}
                   />
                 )}
               </div>

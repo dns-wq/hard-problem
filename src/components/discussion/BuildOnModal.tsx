@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { trpc } from "@/lib/trpc/client";
+import { useT } from "@/i18n/LocaleProvider";
 
 interface BuildOnModalProps {
   topicId: string;
@@ -13,6 +14,7 @@ interface BuildOnModalProps {
 }
 
 export default function BuildOnModal({ topicId, parentId, parentAuthor, parentBody, onClose, onSuccess }: BuildOnModalProps) {
+  const t = useT();
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const MAX = 2000;
@@ -37,7 +39,7 @@ export default function BuildOnModal({ topicId, parentId, parentAuthor, parentBo
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="modal" style={{ maxWidth: 560 }}>
-        <h2 className="modal-title">Build on this argument</h2>
+        <h2 className="modal-title">{t("discuss.buildOn.title")}</h2>
 
         {/* Quoted parent */}
         <div style={{
@@ -60,7 +62,7 @@ export default function BuildOnModal({ topicId, parentId, parentAuthor, parentBo
               className="form-textarea"
               value={body}
               onChange={(e) => setBody(e.target.value.slice(0, MAX))}
-              placeholder="Extend, challenge, or synthesize this argument with your own analysis…"
+              placeholder={t("discuss.buildOn.placeholder")}
               style={{ minHeight: 140, resize: "vertical" }}
               autoFocus
             />
@@ -69,22 +71,22 @@ export default function BuildOnModal({ topicId, parentId, parentAuthor, parentBo
               bottom: "0.5rem",
               right: "0.6rem",
               fontSize: "0.7rem",
-              color: body.length > MAX * 0.9 ? "#c44" : "var(--text-muted)",
+              color: body.length > MAX * 0.9 ? "var(--danger)" : "var(--text-muted)",
             }}>
               {body.length}/{MAX}
             </span>
           </div>
 
-          {error && <p style={{ color: "#c44", fontSize: "0.82rem", marginBottom: "0.75rem" }}>{error}</p>}
+          {error && <p style={{ color: "var(--danger)", fontSize: "0.82rem", marginBottom: "0.75rem" }}>{error}</p>}
 
           <div className="modal-actions">
-            <button type="button" className="modal-btn" onClick={onClose}>Cancel</button>
+            <button type="button" className="modal-btn" onClick={onClose}>{t("common.cancel")}</button>
             <button
               type="submit"
               className="modal-btn modal-btn-primary"
               disabled={!body.trim() || create.isPending}
             >
-              {create.isPending ? "Posting…" : "Post build-on"}
+              {create.isPending ? t("discuss.cta.posting") : t("discuss.buildOn.submit")}
             </button>
           </div>
         </form>

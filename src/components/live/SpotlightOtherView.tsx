@@ -1,0 +1,49 @@
+"use client";
+
+import type { CurrentSpotlight } from "@/types/database";
+import { useT } from "@/i18n/LocaleProvider";
+
+interface SpotlightOtherViewProps {
+  spotlight: CurrentSpotlight; // is_you === false (caller-gated)
+}
+
+// Everyone else's phone while someone is in the spotlight. A pass is never
+// surfaced by name (consent) — render nothing for passed/cleared.
+export default function SpotlightOtherView({ spotlight }: SpotlightOtherViewProps) {
+  const t = useT();
+  if (spotlight.outcome === "passed" || spotlight.outcome === "cleared") return null;
+
+  return (
+    <div
+      style={{
+        padding: "0.9rem 1.1rem",
+        border: "1px solid var(--accent)",
+        borderRadius: 12,
+        background: "var(--bg-surface)",
+        marginBottom: "1.25rem",
+      }}
+    >
+      <span
+        style={{
+          fontSize: "0.72rem",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
+          color: "var(--accent)",
+        }}
+      >
+        {t("live.spotlight.other.eyebrow")}
+      </span>
+      <p style={{ fontSize: "1rem", fontWeight: 600, marginTop: "0.2rem" }}>
+        {spotlight.outcome === "shared"
+          ? t("live.spotlight.other.isSharing", { name: spotlight.drawn_display_name ?? "" })
+          : t("live.spotlight.other.wasCalledOn", { name: spotlight.drawn_display_name ?? "" })}
+      </p>
+      {spotlight.outcome === "shared" && spotlight.note_shared && spotlight.drawn_note && (
+        <p style={{ fontSize: "0.9rem", fontStyle: "italic", color: "var(--text-secondary)", marginTop: "0.4rem" }}>
+          “{spotlight.drawn_note}”
+        </p>
+      )}
+    </div>
+  );
+}

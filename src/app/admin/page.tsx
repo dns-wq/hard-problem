@@ -35,13 +35,13 @@ function StatCard({ label, value, href, warn }: { label: string; value: number; 
     <Link href={href} style={{ textDecoration: "none" }}>
       <div style={{
         background: "var(--bg-surface)",
-        border: `1px solid ${warn && value > 0 ? "#e04040" : "var(--border-light)"}`,
+        border: `1px solid ${warn && value > 0 ? "var(--danger)" : "var(--border-light)"}`,
         borderRadius: 8,
         padding: "1rem 1.25rem",
         cursor: "pointer",
         transition: "border-color 0.15s",
       }}>
-        <div style={{ fontSize: "1.75rem", fontWeight: 700, color: warn && value > 0 ? "#e04040" : "var(--accent)" }}>
+        <div style={{ fontSize: "1.75rem", fontWeight: 700, color: warn && value > 0 ? "var(--danger)" : "var(--accent)" }}>
           {value}
         </div>
         <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>{label}</div>
