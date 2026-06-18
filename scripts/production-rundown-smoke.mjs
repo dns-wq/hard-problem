@@ -50,13 +50,14 @@ async function cleanupStaleTests() {
 
 try {
   await cleanupStaleTests();
-  const host = await createTestUser("host", "editor");
+  // An ordinary host proves that the production rollout guard is set to `all`.
+  const host = await createTestUser("host");
   const participant = await createTestUser("participant");
   const topic = await admin.from("topics").select("id,discussion_prompt").eq("status", "published").limit(1).single();
   if (topic.error) throw topic.error;
   const comparison = randomUUID();
   const blocks = [
-    { kind: "text", title: "Context", content: { body: "Production acceptance context" } },
+    { kind: "text", title: "Context", content: { body: "Production acceptance context", source_url: "https://example.com/source" } },
     { kind: "choice", title: "Before", prompt: "Choose a position", config: { options: [{ id: "a", label: "Agree" }, { id: "b", label: "Disagree" }], max_selections: 1, allow_note: true, audience_results: "on_reveal" }, comparison_group_id: comparison },
     { kind: "open_text", title: "Notes", prompt: "Explain your choice", config: { max_length: 500, audience_results: "on_reveal" } },
     { kind: "video", title: "Lesson video", content: { youtube_id: "dQw4w9WgXcQ", context: "Watch on the host screen" } },
@@ -77,9 +78,14 @@ try {
   async function activate(index) {
     return rpc(host.client, "activate_live_block_v2", { p_session_id: sessionId, p_block_id: rundown.blocks[index].id, p_rerun: false, p_request_id: randomUUID() });
   }
-  const textRun = await activate(0); await rpc(host.client, "close_live_block", { p_session_id: sessionId, p_run_id: textRun });
+  const textRun = await activate(0);
+  const textProjection = await rpc(participant.client, "get_current_live_block", { p_session_id: sessionId });
+  if (textProjection.snapshot.content.source_url !== "https://example.com/source") throw new Error("text source link missing from participant projection");
+  await rpc(host.client, "close_live_block", { p_session_id: sessionId, p_run_id: textRun });
   const beforeRun = await activate(1);
   const privateResponse = await rpc(participant.client, "submit_live_block_response", { p_run_id: beforeRun, p_answer: { selections: ["a"] }, p_text: "private note", p_share_scope: "private" });
+  const ownResponse = await rpc(participant.client, "get_my_live_block_response", { p_run_id: beforeRun });
+  if (ownResponse.id !== privateResponse || ownResponse.text_response !== "private note") throw new Error("caller-owned response projection is incorrect");
   const privateCandidates = await rpc(host.client, "get_live_share_candidates", { p_run_id: beforeRun });
   if (privateCandidates.length !== 0) throw new Error("private response leaked to host candidates");
   await rpc(participant.client, "set_live_response_share_scope", { p_response_id: privateResponse, p_share_scope: "anonymous" });
