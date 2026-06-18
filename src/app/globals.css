@@ -954,6 +954,90 @@ h1, h2, h3, h4 {
 .live-icon-btn:hover { color: var(--accent); }
 .live-icon-btn:disabled { opacity: 0.3; cursor: default; }
 
+/* Rundown authoring fields must shrink inside cards and the narrow live sidebar. */
+.live-rundown-editor,
+.live-rundown-list,
+.live-rundown-card,
+.live-rundown-fields,
+.live-rundown-fields > *,
+.live-rundown-two-column > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.live-rundown-list,
+.live-rundown-options,
+.live-rundown-fields {
+  display: grid;
+}
+
+.live-rundown-list { gap: 0.75rem; }
+.live-rundown-options { gap: 0.4rem; }
+.live-rundown-fields { gap: 0.75rem; margin-top: 0.75rem; }
+.live-rundown-editor { width: 100%; box-sizing: border-box; }
+
+.live-rundown-card {
+  box-sizing: border-box;
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 0.8rem;
+  background: var(--bg-surface);
+}
+
+.live-rundown-card-header,
+.live-rundown-option-row,
+.live-rundown-source-list {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.live-rundown-card-header { flex-wrap: wrap; }
+.live-rundown-card-header > strong {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.live-rundown-card-header > button { flex: 0 0 auto; }
+
+.live-rundown-option-row > .form-input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.live-rundown-source-list { flex-wrap: wrap; }
+.live-rundown-source-list .live-chip {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.live-rundown-two-column {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.live-rundown-fields :is(.form-input, .form-textarea, .form-select) {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.live-rundown-live-editor .live-rundown-card {
+  padding: 0.65rem;
+}
+
+@media (max-width: 520px) {
+  .live-rundown-two-column { grid-template-columns: minmax(0, 1fr); }
+  .live-rundown-card-header > strong { flex-basis: calc(100% - 3rem); }
+}
+
 /* Reaction bursts (Sprint 3) — float up and fade; the parent prunes them */
 .reaction-burst {
   animation: reaction-float 2s ease-out forwards;

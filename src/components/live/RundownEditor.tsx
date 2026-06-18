@@ -67,9 +67,9 @@ function OptionsEditor({ draft, update }: { draft: Draft; update: (next: Draft) 
   const options = (draft.config.options ?? []) as Array<{ id: string; label: string }>;
   const setOptions = (next: typeof options) => update({ ...draft, config: { ...draft.config, options: next, ...(draft.kind === "ranking" ? { required_count: Math.min(Number(draft.config.required_count ?? next.length), next.length) } : {}) } });
   return (
-    <div style={{ display: "grid", gap: "0.4rem" }}>
+    <div className="live-rundown-options">
       {options.map((option, index) => (
-        <div key={option.id} style={{ display: "flex", gap: "0.4rem" }}>
+        <div key={option.id} className="live-rundown-option-row">
           <input className="form-input" value={option.label} onChange={(e) => setOptions(options.map((o, i) => i === index ? { ...o, label: e.target.value } : o))} />
           <button type="button" className="live-icon-btn" onClick={() => setOptions(options.filter((_, i) => i !== index))} disabled={options.length <= 2}>✕</button>
         </div>
@@ -83,14 +83,14 @@ export function BlockEditor({ draft, sources, update }: { draft: Draft; sources?
   const setConfig = (patch: Record<string, unknown>) => update({ ...draft, config: { ...draft.config, ...patch } });
   const audience = String(draft.config.audience_results ?? "on_reveal");
   return (
-    <div style={{ display: "grid", gap: "0.75rem", marginTop: "0.75rem" }}>
+    <div className="live-rundown-fields">
       <input className="form-input" placeholder="Optional block title" value={draft.title} maxLength={120} onChange={(e) => update({ ...draft, title: e.target.value })} />
       {draft.kind !== "text" && draft.kind !== "video" && (
         <textarea className="form-textarea" placeholder="Question or prompt" value={draft.prompt} maxLength={500} rows={2} onChange={(e) => update({ ...draft, prompt: e.target.value })} />
       )}
       {draft.kind === "text" && (
         <>
-          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+          <div className="live-rundown-source-list">
             {sources?.topic.framing_note && <button type="button" className="live-chip" onClick={() => update({ ...draft, title: "Framing", content: { body: sources.topic.framing_note }, sourceType: "custom", sourceId: null })}>Topic framing</button>}
             {sources?.topic.discussion_prompt && <button type="button" className="live-chip" onClick={() => update({ ...draft, title: "Discussion prompt", content: { body: sources.topic.discussion_prompt }, sourceType: "topic_prompt", sourceId: null })}>Discussion prompt</button>}
             {sources?.topic.real_world_anchor?.body && <button type="button" className="live-chip" onClick={() => update({ ...draft, title: sources.topic.real_world_anchor?.title ?? "Real-world anchor", content: { body: sources.topic.real_world_anchor?.body, source_url: sources.topic.real_world_anchor?.source_url }, sourceType: "topic_anchor", sourceId: null })}>Real-world anchor</button>}
@@ -119,7 +119,7 @@ export function BlockEditor({ draft, sources, update }: { draft: Draft; sources?
         <label className="form-label">Items each participant ranks <input type="number" min={1} max={((draft.config.options as unknown[]) ?? []).length} value={Number(draft.config.required_count ?? 2)} onChange={(e) => setConfig({ required_count: Number(e.target.value) })} style={{ width: 64, marginLeft: 8 }} /></label>
       )}
       {draft.kind === "scale" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
+        <div className="live-rundown-two-column">
           <label className="form-label">Minimum<input className="form-input" type="number" value={Number(draft.config.min ?? 1)} onChange={(e) => setConfig({ min: Number(e.target.value) })} /></label>
           <label className="form-label">Maximum<input className="form-input" type="number" value={Number(draft.config.max ?? 5)} onChange={(e) => setConfig({ max: Number(e.target.value) })} /></label>
           <input className="form-input" placeholder="Minimum label" value={String(draft.config.min_label ?? "")} onChange={(e) => setConfig({ min_label: e.target.value })} />
@@ -138,7 +138,7 @@ export function BlockEditor({ draft, sources, update }: { draft: Draft; sources?
         </select><label className="form-label">Answer window (seconds)<input className="form-input" type="number" min={5} max={600} value={Number(draft.config.answer_window_sec ?? 20)} onChange={(e) => setConfig({ answer_window_sec: Number(e.target.value) })} /></label><label className="form-label"><input type="checkbox" checked={draft.config.leaderboard === true} onChange={(e) => setConfig({ leaderboard: e.target.checked })} /> Show leaderboard after reveal</label></>
       )}
       {draft.kind === "open_text" && <label className="form-label">Maximum response length<input className="form-input" type="number" min={1} max={500} value={Number(draft.config.max_length ?? 500)} onChange={(e) => setConfig({ max_length: Number(e.target.value) })} /></label>}
-      {draft.kind === "word_cloud" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}><label className="form-label">Entries<input className="form-input" type="number" min={1} max={3} value={Number(draft.config.max_entries ?? 3)} onChange={(e) => setConfig({ max_entries: Number(e.target.value) })} /></label><label className="form-label">Characters each<input className="form-input" type="number" min={1} max={40} value={Number(draft.config.max_entry_length ?? 40)} onChange={(e) => setConfig({ max_entry_length: Number(e.target.value) })} /></label></div>}
+      {draft.kind === "word_cloud" && <div className="live-rundown-two-column"><label className="form-label">Entries<input className="form-input" type="number" min={1} max={3} value={Number(draft.config.max_entries ?? 3)} onChange={(e) => setConfig({ max_entries: Number(e.target.value) })} /></label><label className="form-label">Characters each<input className="form-input" type="number" min={1} max={40} value={Number(draft.config.max_entry_length ?? 40)} onChange={(e) => setConfig({ max_entry_length: Number(e.target.value) })} /></label></div>}
       {!(["text", "video"] as string[]).includes(draft.kind) && (
         <label className="form-label">Audience results
           <select className="form-input" value={audience} onChange={(e) => setConfig({ audience_results: e.target.value })}>
@@ -185,13 +185,13 @@ export default function RundownEditor({ topic, stanceTags }: { topic: { id: stri
     ranking: t("live.rundown.kind.ranking"), quiz: t("live.rundown.kind.quiz"),
   };
   return (
-    <div className="page-narrow" style={{ maxWidth: 760 }}>
+    <div className="page-narrow live-rundown-editor" style={{ maxWidth: 760 }}>
       <h1 style={{ fontSize: "1.45rem", fontWeight: 800 }}>{t("live.rundown.build.title")}</h1>
       <p style={{ color: "var(--text-secondary)", margin: "0.4rem 0 1.5rem" }}>{t("live.rundown.build.subtitle", { topic: topic.title })}</p>
-      <div role="list" style={{ display: "grid", gap: "0.75rem" }}>
+      <div role="list" className="live-rundown-list">
         {blocks.map((block, index) => (
-          <section role="listitem" aria-grabbed={dragged === index} key={block.localId} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragged != null && dragged !== index) move(dragged, index - dragged); setDragged(null); }} style={{ border: "1px solid var(--border-light)", borderRadius: 10, padding: "0.8rem", background: "var(--bg-surface)", opacity: dragged === index ? 0.65 : 1 }}>
-            <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
+          <section role="listitem" className="live-rundown-card" aria-grabbed={dragged === index} key={block.localId} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragged != null && dragged !== index) move(dragged, index - dragged); setDragged(null); }} style={{ opacity: dragged === index ? 0.65 : 1 }}>
+            <div className="live-rundown-card-header">
               <button type="button" draggable className="live-icon-btn" aria-label={t("live.rundown.action.drag")} onDragStart={() => setDragged(index)} onDragEnd={() => setDragged(null)}>⋮⋮</button>
               <strong style={{ flex: 1 }}>{index + 1}. {labels[block.kind]}{block.title ? ` — ${block.title}` : ""}</strong>
               <button type="button" className="live-icon-btn" aria-label={t("live.rundown.action.moveUp")} onClick={() => move(index, -1)} disabled={index === 0}>↑</button>
