@@ -261,7 +261,7 @@ export const liveRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const [{ data: topic, error: topicError }, { data: papers, error: paperError }, { data: quizzes, error: quizError }] = await Promise.all([
         ctx.supabase.from("topics").select("id, framing_note, discussion_prompt, real_world_anchor, videos").eq("id", input.topicId).single(),
-        ctx.supabase.from("papers").select("id, title, abstract, role").eq("topic_id", input.topicId).order("display_order"),
+        ctx.supabase.from("papers").select("id, title, abstract, source_url, role").eq("topic_id", input.topicId).order("display_order"),
         ctx.supabase.from("quiz_questions").select("id, question_text, question_type, options, correct_answer, explanation").eq("topic_id", input.topicId).order("display_order"),
       ]);
       if (topicError) throw topicError;
@@ -350,6 +350,14 @@ export const liveRouter = createTRPCRouter({
       const { data, error } = await ctx.supabase.rpc("get_current_live_block", { p_session_id: input.sessionId });
       if (error) throw error;
       return (data ?? null) as CurrentLiveBlock | null;
+    }),
+
+  ownBlockResponse: protectedProcedure
+    .input(z.object({ runId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { data, error } = await ctx.supabase.rpc("get_my_live_block_response", { p_run_id: input.runId });
+      if (error) throw error;
+      return (data ?? null) as CurrentLiveBlock["my_response"];
     }),
 
   blockAggregate: protectedProcedure

@@ -16,11 +16,12 @@ export type Draft = {
   sourceType?: "custom" | "topic_prompt" | "topic_anchor" | "paper_excerpt" | "topic_video" | "quiz_bank" | null;
   sourceId?: string | null;
   comparisonGroupId?: string | null;
+  skipped?: boolean;
 };
 
 export type SourceData = {
   topic: { discussion_prompt?: string; framing_note?: string; real_world_anchor?: { title?: string; body?: string; source_url?: string }; videos?: Array<{ youtube_id: string; title: string; speaker?: string; note?: string }> };
-  papers: Array<{ id: string; title: string; abstract: string | null }>;
+  papers: Array<{ id: string; title: string; abstract: string | null; source_url: string }>;
   quizzes: Array<{ id: string; question_text: string; question_type: "mcq" | "true_false"; options: Array<{ label: string; text: string }> | null; correct_answer: string; explanation: string | null }>;
 };
 
@@ -46,6 +47,21 @@ export const kindLabel: Record<LiveBlockKind, string> = {
   text: "Text / instructions", video: "Lesson video", choice: "Choice / stance", open_text: "Open response",
   word_cloud: "Word cloud", scale: "Scale", ranking: "Ranking", quiz: "Quiz",
 };
+
+export function duplicateFollowUpDrafts(drafts: Draft[], index: number): Draft[] {
+  const source = drafts[index];
+  if (!source || (source.kind !== "choice" && source.kind !== "scale")) return drafts;
+  const group = source.comparisonGroupId ?? crypto.randomUUID();
+  const original = { ...source, comparisonGroupId: group };
+  const copy = {
+    ...structuredClone(source),
+    localId: uid(),
+    title: source.title ? `${source.title} — follow-up` : "Follow-up",
+    comparisonGroupId: group,
+    skipped: false,
+  };
+  return [...drafts.slice(0, index), original, copy, ...drafts.slice(index + 1)];
+}
 
 function OptionsEditor({ draft, update }: { draft: Draft; update: (next: Draft) => void }) {
   const options = (draft.config.options ?? []) as Array<{ id: string; label: string }>;
@@ -78,7 +94,7 @@ export function BlockEditor({ draft, sources, update }: { draft: Draft; sources?
             {sources?.topic.framing_note && <button type="button" className="live-chip" onClick={() => update({ ...draft, title: "Framing", content: { body: sources.topic.framing_note }, sourceType: "custom", sourceId: null })}>Topic framing</button>}
             {sources?.topic.discussion_prompt && <button type="button" className="live-chip" onClick={() => update({ ...draft, title: "Discussion prompt", content: { body: sources.topic.discussion_prompt }, sourceType: "topic_prompt", sourceId: null })}>Discussion prompt</button>}
             {sources?.topic.real_world_anchor?.body && <button type="button" className="live-chip" onClick={() => update({ ...draft, title: sources.topic.real_world_anchor?.title ?? "Real-world anchor", content: { body: sources.topic.real_world_anchor?.body, source_url: sources.topic.real_world_anchor?.source_url }, sourceType: "topic_anchor", sourceId: null })}>Real-world anchor</button>}
-            {(sources?.papers ?? []).map((paper) => <button key={paper.id} type="button" className="live-chip" disabled={!paper.abstract} onClick={() => update({ ...draft, title: paper.title, content: { body: paper.abstract ?? "" }, sourceType: "paper_excerpt", sourceId: paper.id })}>{paper.title}</button>)}
+            {(sources?.papers ?? []).map((paper) => <button key={paper.id} type="button" className="live-chip" disabled={!paper.abstract} onClick={() => update({ ...draft, title: paper.title, content: { body: paper.abstract ?? "", source_url: paper.source_url }, sourceType: "paper_excerpt", sourceId: paper.id })}>{paper.title}</button>)}
           </div>
           <textarea className="form-textarea" value={String(draft.content.body ?? "")} maxLength={4000} rows={6} onChange={(e) => update({ ...draft, content: { ...draft.content, body: e.target.value } })} />
         </>
@@ -123,10 +139,12 @@ export function BlockEditor({ draft, sources, update }: { draft: Draft; sources?
       )}
       {draft.kind === "open_text" && <label className="form-label">Maximum response length<input className="form-input" type="number" min={1} max={500} value={Number(draft.config.max_length ?? 500)} onChange={(e) => setConfig({ max_length: Number(e.target.value) })} /></label>}
       {draft.kind === "word_cloud" && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}><label className="form-label">Entries<input className="form-input" type="number" min={1} max={3} value={Number(draft.config.max_entries ?? 3)} onChange={(e) => setConfig({ max_entries: Number(e.target.value) })} /></label><label className="form-label">Characters each<input className="form-input" type="number" min={1} max={40} value={Number(draft.config.max_entry_length ?? 40)} onChange={(e) => setConfig({ max_entry_length: Number(e.target.value) })} /></label></div>}
-      {!(["text", "video", "open_text", "word_cloud", "quiz"] as string[]).includes(draft.kind) && (
+      {!(["text", "video"] as string[]).includes(draft.kind) && (
         <label className="form-label">Audience results
           <select className="form-input" value={audience} onChange={(e) => setConfig({ audience_results: e.target.value })}>
-            <option value="on_reveal">When host reveals</option><option value="live">Live</option><option value="never">Never</option>
+            <option value="on_reveal">When host reveals</option>
+            {!(["open_text", "word_cloud", "quiz"] as string[]).includes(draft.kind) && <option value="live">Live</option>}
+            <option value="never">Never</option>
           </select>
         </label>
       )}
@@ -154,13 +172,6 @@ export default function RundownEditor({ topic, stanceTags }: { topic: { id: stri
     const target = index + delta; if (target < 0 || target >= current.length) return current;
     const next = [...current]; [next[index], next[target]] = [next[target], next[index]]; return next;
   });
-  const duplicateFollowUp = (index: number) => {
-    const source = blocks[index];
-    const group = source.comparisonGroupId ?? crypto.randomUUID();
-    const original = { ...source, comparisonGroupId: group };
-    const copy = { ...structuredClone(source), localId: uid(), title: source.title ? `${source.title} — follow-up` : "Follow-up", comparisonGroupId: group };
-    setBlocks([...blocks.slice(0, index), original, copy, ...blocks.slice(index + 1)]);
-  };
   const submit = () => {
     const invalidVideo = blocks.find((b) => b.kind === "video" && !String(b.content.youtube_id ?? ""));
     const invalidText = blocks.find((b) => b.kind === "text" && !String(b.content.body ?? "").trim());
@@ -177,16 +188,17 @@ export default function RundownEditor({ topic, stanceTags }: { topic: { id: stri
     <div className="page-narrow" style={{ maxWidth: 760 }}>
       <h1 style={{ fontSize: "1.45rem", fontWeight: 800 }}>{t("live.rundown.build.title")}</h1>
       <p style={{ color: "var(--text-secondary)", margin: "0.4rem 0 1.5rem" }}>{t("live.rundown.build.subtitle", { topic: topic.title })}</p>
-      <div style={{ display: "grid", gap: "0.75rem" }}>
+      <div role="list" style={{ display: "grid", gap: "0.75rem" }}>
         {blocks.map((block, index) => (
-          <section key={block.localId} draggable onDragStart={() => setDragged(index)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragged != null && dragged !== index) move(dragged, index - dragged); setDragged(null); }} onDragEnd={() => setDragged(null)} style={{ border: "1px solid var(--border-light)", borderRadius: 10, padding: "0.8rem", background: "var(--bg-surface)", opacity: dragged === index ? 0.65 : 1 }}>
+          <section role="listitem" aria-grabbed={dragged === index} key={block.localId} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragged != null && dragged !== index) move(dragged, index - dragged); setDragged(null); }} style={{ border: "1px solid var(--border-light)", borderRadius: 10, padding: "0.8rem", background: "var(--bg-surface)", opacity: dragged === index ? 0.65 : 1 }}>
             <div style={{ display: "flex", gap: "0.45rem", alignItems: "center" }}>
+              <button type="button" draggable className="live-icon-btn" aria-label={t("live.rundown.action.drag")} onDragStart={() => setDragged(index)} onDragEnd={() => setDragged(null)}>⋮⋮</button>
               <strong style={{ flex: 1 }}>{index + 1}. {labels[block.kind]}{block.title ? ` — ${block.title}` : ""}</strong>
-              <button type="button" className="live-icon-btn" onClick={() => move(index, -1)} disabled={index === 0}>↑</button>
-              <button type="button" className="live-icon-btn" onClick={() => move(index, 1)} disabled={index === blocks.length - 1}>↓</button>
-              {(block.kind === "choice" || block.kind === "scale") && <button type="button" className="live-chip" onClick={() => duplicateFollowUp(index)}>{t("live.rundown.action.followUp")}</button>}
+              <button type="button" className="live-icon-btn" aria-label={t("live.rundown.action.moveUp")} onClick={() => move(index, -1)} disabled={index === 0}>↑</button>
+              <button type="button" className="live-icon-btn" aria-label={t("live.rundown.action.moveDown")} onClick={() => move(index, 1)} disabled={index === blocks.length - 1}>↓</button>
+              {(block.kind === "choice" || block.kind === "scale") && <button type="button" className="live-chip" onClick={() => setBlocks(duplicateFollowUpDrafts(blocks, index))}>{t("live.rundown.action.followUp")}</button>}
               <button type="button" className="live-chip" onClick={() => setExpanded(expanded === block.localId ? null : block.localId)}>{expanded === block.localId ? t("live.rundown.action.done") : t("live.rundown.action.edit")}</button>
-              <button type="button" className="live-icon-btn" onClick={() => setBlocks(blocks.filter((b) => b.localId !== block.localId))} disabled={blocks.length === 1}>✕</button>
+              <button type="button" className="live-icon-btn" aria-label={t("live.rundown.action.delete")} onClick={() => setBlocks(blocks.filter((b) => b.localId !== block.localId))} disabled={blocks.length === 1}>✕</button>
             </div>
             {expanded === block.localId && <BlockEditor draft={block} sources={sourcesQuery.data as SourceData | undefined} update={(next) => setBlocks(blocks.map((b) => b.localId === block.localId ? next : b))} />}
           </section>

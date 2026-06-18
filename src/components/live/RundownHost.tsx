@@ -6,7 +6,7 @@ import { useHostSessionChannel, usePlaySessionChannel } from "@/components/live/
 import type { LiveBlockAggregate, LiveBlockKind } from "@/types/database";
 import type { SpotlightMode } from "@/types/database";
 import { useLocale } from "@/i18n/LocaleProvider";
-import { BlockEditor, defaultDraft, kindLabel, type Draft, type SourceData } from "@/components/live/RundownEditor";
+import { BlockEditor, defaultDraft, duplicateFollowUpDrafts, kindLabel, type Draft, type SourceData } from "@/components/live/RundownEditor";
 
 function Bars({ aggregate }: { aggregate?: LiveBlockAggregate }) {
   if (!aggregate?.items?.length) return null;
@@ -47,9 +47,10 @@ export default function RundownHost({ sessionId, code, topicId, topicTitle, part
   const next = upcoming.find((b) => !b.skipped_at);
   const [editing, setEditing] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [draggedDraft, setDraggedDraft] = useState<number | null>(null);
   const [drawMode, setDrawMode] = useState<SpotlightMode>("no_repeat");
   useEffect(() => {
-    if (!editing) setDrafts(upcoming.map((b) => ({ localId: b.id, kind: b.kind, title: b.title, prompt: b.prompt, config: b.config, content: b.content, sourceType: (b.source_type as Draft["sourceType"]) ?? null, sourceId: b.source_id, comparisonGroupId: b.comparison_group_id })));
+    if (!editing) setDrafts(upcoming.map((b) => ({ localId: b.id, kind: b.kind, title: b.title, prompt: b.prompt, config: b.config, content: b.content, sourceType: (b.source_type as Draft["sourceType"]) ?? null, sourceId: b.source_id, comparisonGroupId: b.comparison_group_id, skipped: !!b.skipped_at })));
   }, [editing, upcoming.map((b) => `${b.id}:${b.updated_at}:${b.skipped_at}`).join("|")]);
   const activeBlock = blocks.find((b) => b.id === run?.block_id);
   const latestRun = runs.length ? runs.reduce((latest, item) => item.run_number > latest.run_number ? item : latest) : null;
@@ -105,9 +106,9 @@ export default function RundownHost({ sessionId, code, topicId, topicTitle, part
           <aside style={{ border: "1px solid var(--border-light)", borderRadius: 14, padding: "1rem", alignSelf: "start" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><h2 style={{ fontSize: "0.9rem" }}>Rundown</h2><button className="live-chip" onClick={() => setEditing(!editing)}>{editing ? t("common.cancel") : t("live.rundown.host.editUpcoming")}</button></div>
             {!editing && <div style={{ display: "grid", gap: "0.45rem" }}>{blocks.map((block) => { const blockRuns = runs.filter((r) => r.block_id === block.id); return <div key={block.id} style={{ padding: "0.55rem", borderRadius: 8, opacity: block.skipped_at ? 0.55 : 1, background: block.id === run?.block_id ? "var(--accent-soft)" : "var(--bg-subtle)" }}><strong>{block.position + 1}. {block.title || block.kind}{block.skipped_at ? ` · ${t("live.rundown.host.skip")}` : ""}</strong><div style={{ display: "flex", gap: "0.3rem", marginTop: "0.35rem", flexWrap: "wrap" }}>{blockRuns.map((r) => <button key={r.id} className="live-chip" onClick={() => revisit.mutate({ sessionId, runId: r.id })}>Run {r.run_number}</button>)}{!block.activated_at && !block.skipped_at && <><button className="live-chip" onClick={() => activate.mutate({ sessionId, blockId: block.id, requestId: crypto.randomUUID() })}>{t("live.rundown.host.present")}</button><button className="live-chip" onClick={() => skip.mutate({ sessionId, blockId: block.id })}>{t("live.rundown.host.skip")}</button></>}</div></div>; })}</div>}
-            {editing && <div style={{ display: "grid", gap: "0.75rem" }}>
-              {drafts.map((draft, index) => <section key={draft.localId} style={{ borderTop: "1px solid var(--border-light)", paddingTop: "0.65rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}><strong style={{ flex: 1 }}>{index + 1}. {kindLabel[draft.kind]}</strong><button className="live-icon-btn" disabled={index === 0} onClick={() => moveDraft(index,-1)}>↑</button><button className="live-icon-btn" disabled={index === drafts.length-1} onClick={() => moveDraft(index,1)}>↓</button><button className="live-icon-btn" onClick={() => setDrafts(drafts.filter((item) => item.localId !== draft.localId))}>✕</button></div>
+            {editing && <div role="list" style={{ display: "grid", gap: "0.75rem" }}>
+              {drafts.map((draft, index) => <section role="listitem" aria-grabbed={draggedDraft === index} key={draft.localId} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (draggedDraft != null && draggedDraft !== index) moveDraft(draggedDraft, index - draggedDraft); setDraggedDraft(null); }} style={{ borderTop: "1px solid var(--border-light)", paddingTop: "0.65rem", opacity: draggedDraft === index ? 0.65 : 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}><button type="button" draggable className="live-icon-btn" aria-label={t("live.rundown.action.drag")} onDragStart={() => setDraggedDraft(index)} onDragEnd={() => setDraggedDraft(null)}>⋮⋮</button><strong style={{ flex: 1 }}>{index + 1}. {kindLabel[draft.kind]}</strong><button className="live-icon-btn" aria-label={t("live.rundown.action.moveUp")} disabled={index === 0} onClick={() => moveDraft(index,-1)}>↑</button><button className="live-icon-btn" aria-label={t("live.rundown.action.moveDown")} disabled={index === drafts.length-1} onClick={() => moveDraft(index,1)}>↓</button>{(draft.kind === "choice" || draft.kind === "scale") && <button type="button" className="live-chip" onClick={() => setDrafts(duplicateFollowUpDrafts(drafts, index))}>{t("live.rundown.action.followUp")}</button>}<button className="live-icon-btn" aria-label={t("live.rundown.action.delete")} onClick={() => setDrafts(drafts.filter((item) => item.localId !== draft.localId))}>✕</button></div>
                 <BlockEditor draft={draft} sources={sources.data as SourceData | undefined} update={(nextDraft) => setDrafts(drafts.map((item) => item.localId === draft.localId ? nextDraft : item))} />
               </section>)}
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>{(Object.keys(kindLabel) as LiveBlockKind[]).map((kind) => <button key={kind} className="live-chip" onClick={() => setDrafts([...drafts, defaultDraft(kind)])}>+ {kindLabel[kind]}</button>)}</div>

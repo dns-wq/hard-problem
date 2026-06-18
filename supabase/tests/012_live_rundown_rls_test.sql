@@ -36,6 +36,7 @@ INSERT INTO topics(id,title,slug,status) VALUES('00000000-0000-0000-0000-0000000
 \i ../migrations/008_live_transcript.sql
 \i ../migrations/009_live_scheduling.sql
 \i ../migrations/012_live_rundown.sql
+\i ../migrations/013_live_rundown_own_response.sql
 
 UPDATE live_runtime_config SET value='internal' WHERE key='rundown_v2_creation';
 
@@ -68,8 +69,12 @@ END $$;
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-00000000000b"}',false);
 SELECT join_live_session(:'S1',true);
 SELECT submit_live_block_response(:'choice_run','{"selections":["a"]}', 'private reason','private') AS alice_response \gset
+SELECT CASE WHEN get_my_live_block_response(:'choice_run')->>'id'=:'alice_response'
+  THEN 'PASS: participant own-response projection returns only caller row' ELSE 'FAIL' END;
 SELECT set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-00000000000c"}',false);
 SELECT join_live_session(:'S1',true);
+SELECT CASE WHEN get_my_live_block_response(:'choice_run') IS NULL
+  THEN 'PASS: another participant cannot project Alice response' ELSE 'FAIL' END;
 
 \echo '=== R2: cross-run/invalid option rejected ==='
 DO $$ BEGIN PERFORM submit_live_block_response((SELECT current_block_run_id FROM live_sessions WHERE id='00000000-0000-0000-0000-000000000201'),'{"selections":["not-an-option"]}',NULL,'private'); RAISE NOTICE 'FAIL: invalid option accepted';

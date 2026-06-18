@@ -3,17 +3,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc/client";
 import { usePlaySessionChannel } from "@/components/live/useLiveChannels";
-import type { CurrentLiveBlock, LiveBlockAggregate, LiveBlockOption, LiveResponseShareScope } from "@/types/database";
+import type { CurrentLiveBlock, LiveBlockAggregate, LiveBlockLeaderboardRow, LiveBlockOption, LiveResponseShareScope } from "@/types/database";
 import SpotlightCallout from "@/components/live/SpotlightCallout";
 import SpotlightOtherView from "@/components/live/SpotlightOtherView";
 import { useLocale } from "@/i18n/LocaleProvider";
 
-function Results({ aggregate, current }: { aggregate?: LiveBlockAggregate; current: CurrentLiveBlock }) {
+function safeHttpUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value) return null;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function Results({ aggregate, current, leaderboard = [] }: { aggregate?: LiveBlockAggregate; current: CurrentLiveBlock; leaderboard?: LiveBlockLeaderboardRow[] }) {
   const { t } = useLocale();
   const kind = current.snapshot.kind;
   const items = aggregate?.items ?? [];
   if (kind === "open_text") return (
-    <div style={{ display: "grid", gap: "0.65rem" }}>{current.publications.map((p) => (
+    <div style={{ display: "grid", gap: "0.65rem" }}><p>{t("live.rundown.results.responses", { count: current.response_count })}</p>{current.publications.map((p) => (
       <blockquote key={p.publication_id} style={{ margin: 0, padding: "0.8rem", border: "1px solid var(--border-light)", borderRadius: 10 }}>
         {p.text}<footer style={{ marginTop: "0.35rem", color: "var(--text-muted)", fontSize: "0.78rem" }}>{p.display_name ?? t("live.rundown.anonymous")}</footer>
       </blockquote>
@@ -23,18 +33,22 @@ function Results({ aggregate, current }: { aggregate?: LiveBlockAggregate; curre
     const counts = new Map<string, number>();
     current.publications.forEach((p) => ((p.answer.entries as string[] | undefined) ?? []).forEach((entry) => counts.set(entry, (counts.get(entry) ?? 0) + 1)));
     const max = Math.max(1, ...counts.values());
-    return <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem", justifyContent: "center", padding: "1rem" }}>{[...counts.entries()].map(([word, count]) => <span key={word} style={{ fontSize: `${0.9 + 1.5 * count / max}rem`, fontWeight: 700 }}>{word}</span>)}</div>;
+    return <div><p>{t("live.rundown.results.responses", { count: current.response_count })}</p><div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem", justifyContent: "center", padding: "1rem" }}>{[...counts.entries()].map(([word, count]) => <span key={word} style={{ fontSize: `${0.9 + 1.5 * count / max}rem`, fontWeight: 700 }}>{word}</span>)}</div></div>;
   }
   if (!aggregate) return null;
   const max = Math.max(1, ...items.map((item) => item.count ?? item.points ?? 0));
+  const before = new Map((aggregate.comparison?.items ?? []).map((item) => [item.id, item.count ?? item.points ?? 0]));
   return (
     <div style={{ display: "grid", gap: "0.6rem" }}>
+      <p>{t("live.rundown.results.responses", { count: aggregate.total })}</p>
       {items.map((item) => {
         const value = item.count ?? item.points ?? 0;
-        return <div key={item.id}><div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}><span>{item.label}</span><strong>{value}</strong></div><div style={{ height: 8, background: "var(--border-light)", borderRadius: 9 }}><div style={{ width: `${value / max * 100}%`, height: "100%", background: "var(--accent)", borderRadius: 9 }} /></div></div>;
+        return <div key={item.id}><div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem" }}><span>{item.label}</span><strong>{before.has(item.id) ? `${before.get(item.id)} → ` : ""}{value}</strong></div><div style={{ height: 8, background: "var(--border-light)", borderRadius: 9 }}><div style={{ width: `${value / max * 100}%`, height: "100%", background: "var(--accent)", borderRadius: 9 }} /></div></div>;
       })}
+      {aggregate.median != null && <p><strong>{t("live.rundown.results.median")}</strong> {aggregate.median}</p>}
       {aggregate.correct_answer && <p><strong>{t("live.rundown.results.correctAnswer")}</strong> {aggregate.correct_answer}</p>}
       {aggregate.explanation && <p style={{ color: "var(--text-secondary)" }}>{aggregate.explanation}</p>}
+      {leaderboard.length > 0 && <section><h2 style={{ fontSize: "1rem" }}>{t("live.rundown.results.leaderboard")}</h2><ol>{leaderboard.map((row) => <li key={row.user_id}>{row.display_name} — {row.total_score}</li>)}</ol></section>}
     </div>
   );
 }
@@ -49,7 +63,8 @@ export default function RundownParticipant({ sessionId, topicTitle, ended }: { s
   const visibility = String(current?.snapshot.config.audience_results ?? "on_reveal");
   const showResults = !!current && (current.status === "revealed" || visibility === "live") && visibility !== "never";
   const aggregateQuery = trpc.live.blockAggregate.useQuery({ runId: current?.run_id ?? "" }, { enabled: !!current?.run_id && showResults && !["text", "video", "open_text", "word_cloud"].includes(current.snapshot.kind), retry: false, refetchInterval: visibility === "live" ? 3000 : false });
-  usePlaySessionChannel(sessionId, !ended, () => { currentQuery.refetch(); aggregateQuery.refetch(); spotlightQuery.refetch(); });
+  const leaderboardQuery = trpc.live.blockLeaderboard.useQuery({ sessionId }, { enabled: !!current && showResults && current.snapshot.kind === "quiz" && current.snapshot.config.leaderboard === true, retry: false });
+  usePlaySessionChannel(sessionId, !ended, () => { currentQuery.refetch(); aggregateQuery.refetch(); leaderboardQuery.refetch(); spotlightQuery.refetch(); });
   const submit = trpc.live.submitBlockResponse.useMutation({ onSuccess: () => currentQuery.refetch() });
   const setScope = trpc.live.setBlockResponseShareScope.useMutation({ onSuccess: () => currentQuery.refetch() });
   const [selected, setSelected] = useState<string[]>([]);
@@ -81,6 +96,7 @@ export default function RundownParticipant({ sessionId, topicTitle, ended }: { s
   if (currentQuery.error) return <div className="auth-error" role="alert"><p>{t("live.rundown.participant.syncError")}</p><button className="btn" onClick={() => currentQuery.refetch()}>{t("live.rundown.participant.retry")}</button></div>;
   if (!current) return <div style={{ textAlign: "center", paddingTop: "3rem" }}><h2>{t("live.rundown.participant.joined")}</h2><p style={{ color: "var(--text-secondary)" }}>{t("live.rundown.participant.waiting")}</p></div>;
   const { snapshot } = current;
+  const sourceUrl = safeHttpUrl(snapshot.content.source_url);
   const spotlight = spotlightQuery.data;
   const alreadySubmitted = !!current.my_response;
   const secondsLeft = current.accepting_until ? Math.max(0, Math.ceil((new Date(current.accepting_until).getTime() - now) / 1000)) : null;
@@ -108,7 +124,7 @@ export default function RundownParticipant({ sessionId, topicTitle, ended }: { s
       <p style={{ color: "var(--text-muted)", fontSize: "0.75rem", textTransform: "uppercase" }}>{topicTitle}</p>
       {snapshot.title && <p style={{ color: "var(--accent)", fontWeight: 700, marginTop: "0.5rem" }}>{snapshot.title}</p>}
       {spotlight && (spotlight.is_you && spotlight.outcome === "pending" ? <SpotlightCallout spotlight={spotlight} raffleMode={false} busy={passDraw.isPending || shareDraw.isPending} errorMessage={passDraw.error?.message || shareDraw.error?.message || undefined} onShare={(shareNote) => shareDraw.mutate({ drawId: spotlight.draw_id, shareNote })} onPass={() => passDraw.mutate({ drawId: spotlight.draw_id })} /> : !spotlight.is_you ? <SpotlightOtherView spotlight={spotlight} /> : null)}
-      {snapshot.kind === "text" && <div style={{ whiteSpace: "pre-wrap", fontSize: "1.08rem", lineHeight: 1.7 }}>{String(snapshot.content.body ?? "")}</div>}
+      {snapshot.kind === "text" && <div><div style={{ whiteSpace: "pre-wrap", fontSize: "1.08rem", lineHeight: 1.7 }}>{String(snapshot.content.body ?? "")}</div>{sourceUrl && <p><a href={sourceUrl} target="_blank" rel="noreferrer">{t("live.rundown.participant.openSource")}</a></p>}</div>}
       {snapshot.kind === "video" && <div><h2>{snapshot.title}</h2><p style={{ color: "var(--text-secondary)" }}>{String(snapshot.content.context ?? t("live.rundown.participant.watchScreen"))}</p><a href={`https://youtu.be/${snapshot.content.youtube_id}`} target="_blank" rel="noreferrer">{t("live.rundown.participant.openVideo")}</a></div>}
       {!(["text", "video"] as string[]).includes(snapshot.kind) && <h1 style={{ fontSize: "1.35rem", lineHeight: 1.4, margin: "1rem 0" }}>{snapshot.prompt}</h1>}
       {secondsLeft != null && <p style={{ color: secondsLeft <= 5 ? "var(--danger)" : "var(--text-muted)", fontWeight: 700 }}>{t("live.rundown.timer", { seconds: secondsLeft })}</p>}
@@ -130,7 +146,7 @@ export default function RundownParticipant({ sessionId, topicTitle, ended }: { s
       {setScope.error && <p className="auth-error" role="alert">{t("live.rundown.participant.consentError")}</p>}
       {secondsLeft === 0 && current.status === "active" && <p style={{ color: "var(--text-muted)" }}>{t("live.rundown.participant.timerClosed")}</p>}
       {current.status === "closed" && !showResults && <p style={{ color: "var(--text-muted)" }}>{t("live.rundown.participant.closed")}</p>}
-      {showResults && <Results aggregate={aggregateQuery.data} current={current} />}
+      {showResults && <Results aggregate={aggregateQuery.data} current={current} leaderboard={leaderboardQuery.data} />}
     </div>
   );
 }

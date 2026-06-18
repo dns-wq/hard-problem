@@ -1,5 +1,5 @@
 name: verify
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 jobs:
   app:
     runs-on: ubuntu-latest
@@ -16,3 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm run test:db
+  production-browser:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: https://www.hardproblem.club
